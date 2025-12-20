@@ -1,43 +1,35 @@
 import analysis.CoOccurrenceAnalysis
 import extraction.DataExtractor
+import analysis.ExecutionMetrics
+import analysis.MetricsCollector
 import org.apache.spark.sql.SparkSession
 import utils.Utils
 
 /**
- * Classe principale per l'analisi delle co-occorrenze di eventi sismici.
+ * Main per l'analisi delle co-occorrenze di eventi sismici.
  * 
- * Il programma:
- * 1. Carica eventi sismici da un file CSV
- * 2. Normalizza le coordinate arrotondando alla prima cifra decimale
- * 3. Rimuove duplicati (stessa località, stessa data)
- * 4. Trova la coppia di località che co-occorre più frequentemente
- * 5. Estrae le date in cui avvengono tali co-occorrenze
- * 6. Salva i risultati in formato testuale
+ * Genera automaticamente metriche in formato CSV per facilitare
+ * l'analisi delle performance e la creazione del report.
  * 
- * Supporta TRE APPROCCI DIVERSI per confrontare prestazioni:
- * - Approccio 1 (groupByKey): Semplice ma meno efficiente
- * - Approccio 2 (aggregateByKey): Ottimizzato, riduce shuffling
- * - Approccio 3 (reduceByKey): Bilanciato tra efficienza e semplicità
+ * Usage: Main <input-file> <output-file> [num-partitions] [approach] [partitioner] [num-workers]
  * 
- * Usage: Main <input-file> <output-file> [num-partitions] [approach]
- *   approach: 1 o groupbykey | 2 o aggregatebykey | 3 o reducebykey
+ * Parametri:
+ *   input-file: Path al CSV di input
+ *   output-file: Path directory output
+ *   num-partitions: Numero di partizioni (default: 8)
+ *   approach: 1|groupbykey, 2|aggregatebykey, 3|reducebykey (default: 1)
+ *   partitioner: hash|range (default: hash)
+ *   num-workers: Numero di worker nel cluster (default: 1, per metriche)
  */
 object Main {
   
-  /**
-   * Entry point del programma.
-   * 
-   * @param args Argomenti da linea di comando:
-   *             args(0): Path file CSV di input (locale o gs://)
-   *             args(1): Path directory output (locale o gs://)
-   *             args(2): [Opzionale] Numero di partizioni (default: 8)
-   *             args(3): [Opzionale] Approccio: 1|2|3 o groupbykey|aggregatebykey|reducebykey (default: 1)
-   */
   def main(args: Array[String]): Unit = {
     // Validazione argomenti
     if (args.length < 2) {
-      println("Usage: Main <input-file> <output-file> [num-partitions] [approach]")
+      println("Usage: Main <input-file> <output-file> [num-partitions] [approach] [partitioner] [num-workers]")
       println("  approach: 1|groupbykey (default), 2|aggregatebykey, 3|reducebykey")
+      println("  partitioner: hash (default), range")
+      println("  num-workers: number of workers in cluster (for metrics)")
       System.exit(1)
     }
 
@@ -49,80 +41,82 @@ object Main {
     } else {
       analysis.CoOccurrenceAnalysis.GroupByKeyApproach
     }
+    val partitioner = if (args.length > 4) {
+      CoOccurrenceAnalysis.parsePartitioner(args(4))
+    } else {
+      analysis.HashPartitionerType
+    }
+    val numWorkers = if (args.length > 5) args(5).toInt else 1
 
     // Inizializzazione Spark
     val spark = SparkSession.builder
       .appName("Earthquake Co-occurrence Analysis")
       .getOrCreate()
 
-    println("=" * 70)
-    println("EARTHQUAKE CO-OCCURRENCE ANALYSIS")
-    println("=" * 70)
-    println(s"Input file: $inputFile")
-    println(s"Output file: $outputFile")
-    println(s"Number of partitions: $numPartitions")
-    println(s"Analysis approach: ${approach.getClass.getSimpleName.replace("$", "")}")
-    println("=" * 70)
+    printHeader(inputFile, outputFile, numPartitions, approach, partitioner, numWorkers)
 
     try {
       // Caricamento dati
-      println("\n[1/3] Loading data...")
+      println("\n[1/4] Loading data...")
       val startLoad = System.currentTimeMillis()
       val rawData = DataExtractor.loadData(spark, inputFile)
       val loadTime = System.currentTimeMillis() - startLoad
       println(s"✓ Data loaded in ${loadTime}ms (${loadTime / 1000.0}s)")
 
       // Analisi co-occorrenze
-      println("\n[2/3] Analyzing co-occurrences...")
+      println("\n[2/4] Analyzing co-occurrences...")
       val startAnalysis = System.currentTimeMillis()
       val result = CoOccurrenceAnalysis.findMaxCoOccurrence(
         rawData, 
         numPartitions,
-        approach
+        approach,
+        partitioner
       )
       val analysisTime = System.currentTimeMillis() - startAnalysis
       println(s"✓ Analysis completed in ${analysisTime}ms (${analysisTime / 1000.0}s)")
 
       // Salvataggio risultati
-      println("\n[3/3] Saving results...")
-      result match {
-        case Some((pair, dates)) =>
-          val output = Utils.formatOutput(pair, dates)
+      println("\n[3/4] Saving results...")
+      result.maxPair match {
+        case Some(pair) =>
+          val output = Utils.formatOutput(pair, result.dates)
           Utils.saveOutput(spark, output, outputFile)
           
           println(s"✓ Results saved to: $outputFile")
-          println("\n" + "=" * 70)
-          println("RESULTS SUMMARY")
-          println("=" * 70)
-          println(s"Max co-occurrence pair:")
-          println(s"  Location 1: ${pair.first}")
-          println(s"  Location 2: ${pair.second}")
-          println(s"Number of co-occurrences: ${dates.length}")
-          println(s"Date range: ${dates.head} to ${dates.last}")
-          
-          if (dates.length <= 10) {
-            println("\nAll co-occurrence dates:")
-            dates.foreach(date => println(s"  - $date"))
-          } else {
-            println(s"\nFirst 5 dates:")
-            dates.take(5).foreach(date => println(s"  - $date"))
-            println(s"  ... (${dates.length - 5} more dates)")
-          }
+          printResultsSummary(pair, result)
           
         case None =>
-          println("⚠ No co-occurrences found in the dataset")
+          println("⚠ No co-occurrences found")
       }
 
-      // Performance summary
+      // Salvataggio metriche
+      println("\n[4/4] Saving metrics...")
       val totalTime = loadTime + analysisTime
-      println("\n" + "=" * 70)
-      println("PERFORMANCE SUMMARY")
-      println("=" * 70)
-      println(f"Load time:     ${loadTime}%8d ms (${loadTime / 1000.0}%6.2f s)")
-      println(f"Analysis time: ${analysisTime}%8d ms (${analysisTime / 1000.0}%6.2f s)")
-      println(f"Total time:    ${totalTime}%8d ms (${totalTime / 1000.0}%6.2f s)")
-      println(f"Approach:      ${approach.getClass.getSimpleName.replace("$", "")}")
-      println("=" * 70)
+      
+      val metrics = ExecutionMetrics(
+        approach = CoOccurrenceAnalysis.approachName(approach),
+        partitioner = CoOccurrenceAnalysis.partitionerName(partitioner),
+        numWorkers = numWorkers,
+        numPartitions = numPartitions,
+        totalEvents = result.totalEvents,
+        uniqueEvents = result.uniqueEvents,
+        coOccurrences = result.coOccurrences,
+        loadTimeMs = loadTime,
+        analysisTimeMs = analysisTime,
+        totalTimeMs = totalTime,
+        maxCoOccurrenceCount = result.maxCount
+      )
+      
+      // Salva metriche in formato CSV
+      MetricsCollector.saveMetricsToCsv(spark, metrics, outputFile)
+      
+      // Salva anche in formato leggibile
+      MetricsCollector.saveMetricsReadable(spark, metrics, outputFile)
+      
+      println(s"✓ Metrics saved to: $outputFile/metrics")
+      
+      // Stampa performance summary
+      printPerformanceSummary(loadTime, analysisTime, totalTime, approach, partitioner)
 
     } catch {
       case e: Exception =>
@@ -132,5 +126,82 @@ object Main {
     } finally {
       spark.stop()
     }
+  }
+  
+  /**
+   * Stampa l'header con le configurazioni.
+   */
+  private def printHeader(
+    inputFile: String,
+    outputFile: String,
+    numPartitions: Int,
+    approach: analysis.CoOccurrenceAnalysis.AnalysisApproach,
+    partitioner: analysis.PartitionerType,
+    numWorkers: Int
+  ): Unit = {
+    println("=" * 70)
+    println("EARTHQUAKE CO-OCCURRENCE ANALYSIS")
+    println("=" * 70)
+    println(s"Input file: $inputFile")
+    println(s"Output file: $outputFile")
+    println(s"Number of workers: $numWorkers")
+    println(s"Number of partitions: $numPartitions")
+    println(s"Analysis approach: ${CoOccurrenceAnalysis.approachName(approach)}")
+    println(s"Partitioner: ${CoOccurrenceAnalysis.partitionerName(partitioner)}")
+    println("=" * 70)
+  }
+  
+  /**
+   * Stampa il sommario dei risultati.
+   */
+  private def printResultsSummary(
+    pair: analysis.LocationPair,
+    result: analysis.AnalysisResult
+  ): Unit = {
+    println("\n" + "=" * 70)
+    println("RESULTS SUMMARY")
+    println("=" * 70)
+    println(s"Max co-occurrence pair:")
+    println(s"  Location 1: ${pair.first}")
+    println(s"  Location 2: ${pair.second}")
+    println(s"Number of co-occurrences: ${result.dates.length}")
+    println(s"Total events processed: ${result.totalEvents}")
+    println(s"Unique events (after dedup): ${result.uniqueEvents}")
+    println(s"Total co-occurrences found: ${result.coOccurrences}")
+    
+    if (result.dates.nonEmpty) {
+      println(s"Date range: ${result.dates.head} to ${result.dates.last}")
+      
+      if (result.dates.length <= 10) {
+        println("\nAll co-occurrence dates:")
+        result.dates.foreach(date => println(s"  - $date"))
+      } else {
+        println(s"\nFirst 5 dates:")
+        result.dates.take(5).foreach(date => println(s"  - $date"))
+        println(s"  ... (${result.dates.length - 5} more dates)")
+      }
+    }
+  }
+  
+  /**
+   * Stampa il sommario delle performance.
+   */
+  private def printPerformanceSummary(
+    loadTime: Long,
+    analysisTime: Long,
+    totalTime: Long,
+    approach: analysis.CoOccurrenceAnalysis.AnalysisApproach,
+    partitioner: analysis.PartitionerType
+  ): Unit = {
+    println("\n" + "=" * 70)
+    println("PERFORMANCE SUMMARY")
+    println("=" * 70)
+    println(f"Load time:     ${loadTime}%8d ms (${loadTime / 1000.0}%6.2f s)")
+    println(f"Analysis time: ${analysisTime}%8d ms (${analysisTime / 1000.0}%6.2f s)")
+    println(f"Total time:    ${totalTime}%8d ms (${totalTime / 1000.0}%6.2f s)")
+    println(f"Approach:      ${CoOccurrenceAnalysis.approachName(approach)}")
+    println(f"Partitioner:   ${CoOccurrenceAnalysis.partitionerName(partitioner)}")
+    println("=" * 70)
+    println("\nMetrics CSV file has been generated for report analysis.")
   }
 }
