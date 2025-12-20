@@ -1,6 +1,7 @@
 import analysis.CoOccurrenceAnalysis
 import extraction.DataExtractor
-import metrics.{ExecutionMetrics, MetricsCollector}
+import analysis.ExecutionMetrics
+import analysis.MetricsCollector
 import org.apache.spark.sql.SparkSession
 import utils.Utils
 
