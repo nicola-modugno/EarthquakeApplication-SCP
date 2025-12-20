@@ -185,7 +185,7 @@ gcloud dataproc clusters delete earthquake-cluster --region=europe-west1
 
 ## 📚 Documentazione
 
-### Per Iniziare
+### Per Approfondire
 
 **Leggi la [COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)** per istruzioni passo-passo su:
 - Setup completo
