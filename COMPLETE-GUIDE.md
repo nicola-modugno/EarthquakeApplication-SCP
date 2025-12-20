@@ -95,9 +95,24 @@ sbt compile
 sbt assembly
 ```
 
-Il JAR verrà creato in: `target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar`
+### Verifica JAR Creato
 
-### Step 2: Esegui Test Locale
+```bash
+# Linux/Mac
+ls -lh target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar
+
+# Windows (PowerShell)
+Get-Item target\scala-2.13\earthquake-cooccurrence-assembly-1.0.jar
+
+# Windows (CMD)
+dir target\scala-2.13\earthquake-cooccurrence-assembly-1.0.jar
+```
+
+---
+
+## Test Locali
+
+### Sintassi Base
 
 ```bash
 # Test con approccio 1 (GroupByKey) e Hash partitioner
@@ -157,7 +172,102 @@ gcloud config list
 # Scegli un nome univoco per il bucket
 BUCKET_NAME="earthquake-analysis-TUOMATRICOLA"
 
-# Crea il bucket
+---
+
+## Verifica Risultati Locali
+
+### Visualizza Output
+
+```bash
+# Linux/Mac/Git Bash
+cat output-aggregatebykey/part-00000
+
+# Windows CMD
+type output-aggregatebykey\part-00000
+
+# Windows PowerShell
+Get-Content output-aggregatebykey\part-00000
+```
+
+**Formato output**:
+```
+((lat1, lon1), (lat2, lon2))
+2024-03-12
+2024-04-01
+2024-04-03
+```
+
+### Visualizza Metriche
+
+```bash
+# Linux/Mac/Git Bash
+cat output-aggregatebykey/metrics/part-00000
+
+# Windows CMD
+type output-aggregatebykey\metrics\part-00000
+```
+
+**Formato metriche CSV**:
+
+```csv
+approach,partitioner,num_workers,num_partitions,total_events,unique_events,
+co_occurrences,load_time_ms,analysis_time_ms,total_time_ms,max_count,timestamp
+```
+
+### Campi delle Metriche
+
+| Campo | Descrizione | Unità |
+|-------|-------------|-------|
+| approach | Approccio utilizzato | GroupByKey/AggregateByKey/ReduceByKey |
+| partitioner | Tipo di partitioner | Hash/Range |
+| num_workers | Numero di worker nodes | int |
+| num_partitions | Numero di partizioni | int |
+| total_events | Eventi totali caricati | count |
+| unique_events | Eventi unici dopo dedup | count |
+| co_occurrences | Coppie co-occorrenze | count |
+| load_time_ms | Tempo caricamento | milliseconds |
+| analysis_time_ms | Tempo analisi | milliseconds |
+| total_time_ms | Tempo totale | milliseconds |
+| max_count | Conteggio coppia vincente | count |
+| timestamp | Timestamp esecuzione | epoch |
+
+### File Generati
+
+Per ogni esecuzione vengono generati:
+
+1. **`output/part-*`** - Risultato dell'analisi
+2. **`output/metrics/part-*`** - Metriche in formato CSV
+3. **`output/metrics-readable/part-*`** - Metriche in formato leggibile
+
+### Uso delle Metriche
+
+Le metriche CSV possono essere:
+- Importate in Excel/Google Sheets
+- Usate per calcolare Speedup ed Efficiency
+- Aggregate per generare grafici
+- Analizzate per il report del progetto
+
+## 📝 Formato Output
+
+```
+((37.5, 15.3), (38.1, 13.4))
+2024-03-12
+2024-04-01
+2024-04-03
+```
+
+Prima riga: coppia di località che co-occorre più frequentemente
+Righe successive: date in cui avvengono le co-occorrenze (ordine crescente)
+
+---
+
+## Esecuzione su Google Cloud
+
+### Setup Google Cloud Storage
+
+```bash
+# 1. Crea bucket
+BUCKET_NAME="earthquake-YOUR_MATRICOLA"
 gsutil mb gs://$BUCKET_NAME/
 
 # Verifica
