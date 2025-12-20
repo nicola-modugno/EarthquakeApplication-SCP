@@ -113,14 +113,7 @@ co_occurrences,load_time_ms,analysis_time_ms,total_time_ms,max_count,timestamp
 
 Per ogni esecuzione vengono generati:
 
-1. **`output/part-*`** - Risultato dell'analisi:
-   ```
-   ((lat1, lon1), (lat2, lon2))
-   date1
-   date2
-   ...
-   ```
-
+1. **`output/part-*`** - Risultato dell'analisi
 2. **`output/metrics/part-*`** - Metriche in formato CSV
 3. **`output/metrics-readable/part-*`** - Metriche in formato leggibile
 

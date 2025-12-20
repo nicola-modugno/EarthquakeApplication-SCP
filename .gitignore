@@ -1,4 +1,12 @@
 target/
+target/streams
+target/global-logging
+target/scala-2.13/classes
+target/scala-2.13/sync
+target/scala-2.13/update
+target/scala-2.13/zinc
+target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar
+target/task-temp-directory
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
