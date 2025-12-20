@@ -108,7 +108,7 @@ latitude,longitude,date
 ## Compilazione
 
 ### Pulizia e Compilazione Completa
-
+I seguenti comandi vanno eseguiti nella *root* del repository
 ```bash
 # Pulisci build precedente
 sbt clean
