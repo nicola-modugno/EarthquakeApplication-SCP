@@ -1,15 +1,21 @@
-<img title="a title" alt="Alt text" src="blobs/images/splash.png">
+<img title="a title" alt="Alt text" src="blobs/images/splash.png" style="width: 300px; height: 450px;">
 
 
 ## 🏠 PARTE 1: Test in Locale
 
 ### Prerequisiti
+- Java 17
+- Scala 2.13.x
+- SBT
+- Apache Spark 4.0.1 (per test locali)
+- Google Cloud SDK (per DataProc)
+
 ```bash
-# Verifica di avere tutto installato
-java -version     # Deve essere 8 o superiore
-scala -version    # Deve essere 2.12.x
+# Per verificare di avere tutto installato
+java -version     # Deve essere 17 o superiore
+scala -version    # Deve essere 2.13.x
 sbt --version     # Qualsiasi versione recente
-spark-submit --version  # Deve essere 3.x
+spark-submit --version  # Deve essere 4.x
 ```
 
 ### Step 1: Compila il Progetto
