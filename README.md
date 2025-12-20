@@ -9,27 +9,22 @@ Il progetto implementa un'analisi distribuita su dataset di terremoti per trovar
 ### Caratteristiche principali:
 - **Arrotondamento coordinate**: Latitudine e longitudine → prima cifra decimale
 - **Finestra temporale**: Co-occorrenza basata su giorni (yyyy-MM-dd)
-- **Deduplicazione**: Eventi nella stessa cella geografica e data trattati come unici
-- **TRE APPROCCI DIVERSI**: Implementazioni alternative per confronto prestazioni
-- **DUE PARTITIONER**: HashPartitioner e RangePartitioner
+- **Rimozione dei duplicati**: Eventi nella stessa cella geografica e data trattati come unici
+- **Tre approcci diversi**: Implementazioni con partitioner e funzioni differenti per confrontare le prestazioni
 - **Scalabilità**: Testabile su cluster 2, 3, 4 worker nodes
 
 ## 🔬 Tre Approcci Implementati
 
-Come richiesto dalle specifiche del progetto, sono stati implementati **tre approcci diversi**:
+L'analisi è stata eseguita utilizzando **tre approcci diversi**:
 
-| Approccio | Tecnica | Caratteristiche |
-|-----------|---------|-----------------|
-| 1️⃣ GroupByKey | Raggruppa tutti i dati | Semplice, alto shuffling |
-| 2️⃣ AggregateByKey | Aggregazione incrementale | Veloce, efficiente, riduce shuffling |
-| 3️⃣ ReduceByKey | Combinazione locale | Bilanciato, ottimo per conteggi |
+- GroupByKey<br> 
+- AggregateByKey<br>
+- ReduceByKey
 
-## 🎛️ Due Partitioner Disponibili
+con l'ausilio di due partitioner differenti:
 
-| Partitioner | Caratteristiche |
-|-------------|-----------------|
-| **Hash** | Distribuzione uniforme, O(1), raccomandato |
-| **Range** | Preserva ordine, O(log n), overhead sampling |
+- **Hash** <br>
+- **Range**
 
 ## 📁 Struttura del Progetto
 
@@ -197,49 +192,27 @@ gcloud dataproc clusters delete earthquake-cluster --region=europe-west1
 
 ## 📚 Documentazione
 
-### Guide Disponibili
-
-- **[COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)** - 📖 **Guida completa con esempi dettagliati per ogni configurazione**
-- APPROACHES-COMPARISON.md - Analisi tecnica dei 3 approcci
-- PARTITIONER-ANALYSIS.md - Confronto Hash vs Range
-- QUICK-REFERENCE.txt - Comandi essenziali
-
 ### Per Iniziare
 
 **Leggi la [COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)** per istruzioni passo-passo su:
 - Setup completo
 - Esempi per ogni approccio
 - Test locali e cloud
-- Troubleshooting
 - Analisi risultati
+- Troubleshooting
+
+### API Doc
+- **Codice**: Documentazione Scaladoc in [target/scala-2.13/api/index.html](target/scala-2.13/api/index.html)
 
 ## 🔧 Requisiti
 
 - **Java**: 17 o superiore
 - **Scala**: 2.13.x
-- **SBT**: 1.x
 - **Spark**: 4.0.x
 - **Google Cloud SDK** (per esecuzione cloud)
 
-## 🎯 Per il Report
-
-Il sistema di metriche genera automaticamente i dati necessari per:
-- Calcolare Speedup
-- Calcolare Strong Scaling Efficiency
-- Confrontare gli approcci
-- Confrontare i partitioner
-- Creare grafici e tabelle
-
-Vedi [COMPLETE-GUIDE.md](COMPLETE-GUIDE.md) sezione "Analisi dei Risultati" per formule e procedure.
-
-## 📞 Supporto
-
-- **Codice**: Documentazione Scaladoc in `src/`
-- **Esecuzione**: Vedi [COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)
-- **Problemi**: Sezione Troubleshooting nella guida completa
-
 ---
 
-**Autore**: [Nome Cognome]  
+**Autore**: Nicola Modugno  
 **Corso**: Scalable and Cloud Programming  
 **A.A.**: 2025-26
