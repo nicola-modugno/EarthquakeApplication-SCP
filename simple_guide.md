@@ -23,7 +23,75 @@ cd /path/to/your/project
 # Compila
 sbt clean compile
 
-# Crea il JAR
+# Login
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+```
+
+---
+
+## Setup Iniziale
+
+### 1. Clona/Scarica il Progetto
+
+```bash
+cd /path/to/your/workspace
+# Se hai Git
+git clone YOUR_REPO_URL
+cd EarthquakeCoOccurrenceAnalysis-SACP
+```
+
+### 2. Verifica Struttura
+
+```bash
+# Verifica che esistano questi file:
+ls -la src/main/scala/Main.scala
+ls -la build.sbt
+ls -la project/plugins.sbt
+
+# Windows
+dir src\main\scala\Main.scala
+dir build.sbt
+dir project\plugins.sbt
+```
+
+### 3. Prepara Dataset di Test
+
+Crea `test-data.csv`:
+
+```csv
+latitude,longitude,date
+37.502,15.312,2024-03-12 02:10:00
+38.112,13.372,2024-03-12 05:55:00
+37.521,15.324,2024-03-12 04:32:00
+37.547,15.323,2024-04-01 14:22:00
+38.147,13.324,2024-04-01 21:55:00
+37.535,15.341,2024-04-03 12:32:00
+38.142,13.387,2024-04-03 18:33:00
+43.769,11.255,2024-04-03 21:10:00
+37.498,15.289,2024-03-12 23:45:00
+```
+
+**IMPORTANTE**: Il file DEVE avere:
+- Header: `latitude,longitude,date`
+- Almeno 3 colonne
+- Date in formato `YYYY-MM-DD` o `YYYY-MM-DD HH:MM:SS`
+
+---
+
+## Compilazione
+
+### Pulizia e Compilazione Completa
+I seguenti comandi vanno eseguiti nella *root* del repository
+```bash
+# Pulisci build precedente
+sbt clean
+
+# Compila sorgenti
+sbt compile
+# Verifica: [success] e nessun [error]
+
+# Crea JAR assembly
 sbt assembly
 ```
 
