@@ -13,8 +13,8 @@
 5. [Esecuzione su Google Cloud](#esecuzione-su-google-cloud)
 6. [Configurazioni e Parametri](#configurazioni-e-parametri)
 7. [Esempi per Ogni Approccio](#esempi-per-ogni-approccio)
-8. [Troubleshooting](#troubleshooting)
-9. [Analisi dei Risultati](#analisi-dei-risultati)
+8. [Analisi dei Risultati](#analisi-dei-risultati)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -157,7 +157,7 @@ spark-submit \
   <NUM_WORKERS>
 ```
 
-### Parametri Dettagliati
+### Specifiche Parametri
 
 | Parametro | Descrizione | Valori | Default |
 |-----------|-------------|--------|---------|
@@ -202,19 +202,7 @@ spark-submit ^
   1
 ```
 
-**Caratteristiche**:
-- ✅ Semplice da capire
-- ❌ Più lento (alto shuffling)
-- ⚠️ Rischio OutOfMemory con dataset grandi
-
-**Output atteso**:
-```
-Total events loaded: 9
-Unique events after deduplication: 9
-Total co-occurrences found: X
-```
-
-### Approccio 2: AggregateByKey (RACCOMANDATO)
+### Approccio 2: AggregateByKey
 
 ```bash
 # Linux/Mac/Git Bash
@@ -243,13 +231,6 @@ spark-submit ^
   hash ^
   1
 ```
-
-**Caratteristiche**:
-- ✅ Più veloce (shuffling ridotto)
-- ✅ Memory efficient
-- ✅ Scala meglio con dataset grandi
-
-**Performance attese**: ~20-30% più veloce di GroupByKey
 
 ### Approccio 3: ReduceByKey
 
@@ -281,13 +262,6 @@ spark-submit ^
   1
 ```
 
-**Caratteristiche**:
-- ✅ Bilanciato tra semplicità e performance
-- ✅ Ottimo per conteggi
-- ✅ Shuffling ottimizzato
-
-**Performance attese**: ~15-25% più veloce di GroupByKey
-
 ---
 
 ## Test con Diversi Partitioner
@@ -307,11 +281,6 @@ spark-submit \
   1
 ```
 
-**Caratteristiche**:
-- ✅ Distribuzione uniforme
-- ✅ O(1) per assegnazione partizione
-- ✅ **Raccomandato per questo progetto**
-
 ### Range Partitioner
 
 ```bash
@@ -326,13 +295,6 @@ spark-submit \
   range \
   1
 ```
-
-**Caratteristiche**:
-- ✅ Preserva ordine delle chiavi
-- ❌ Overhead di sampling iniziale
-- ⚠️ Possibile data skew
-
-**Performance attese**: ~5-15% più lento di Hash
 
 ---
 
@@ -585,6 +547,96 @@ chmod +x run-all-experiments.sh
 
 ---
 
+## Analisi dei Risultati
+
+### Calcolo Speedup
+
+```
+Speedup(n) = T_baseline / T(n)
+
+dove:
+- T_baseline = tempo con 2 workers, GroupByKey, Hash
+- T(n) = tempo configurazione corrente
+```
+
+**Esempio**:
+```
+T_baseline = 120s
+T_current = 80s
+Speedup = 120 / 80 = 1.5x
+```
+
+### Calcolo Strong Scaling Efficiency
+
+```
+Efficiency(n) = T(2) / (n × T(n) / 2)
+
+dove:
+- T(2) = tempo con 2 workers
+- T(n) = tempo con n workers
+- n = numero workers
+```
+
+**Esempio**:
+```
+T(2) = 120s
+T(4) = 40s
+n = 4
+
+Efficiency = 120 / (4 × 40 / 2) = 120 / 80 = 1.5 = 150%
+```
+
+### Import Metriche in Excel/Google Sheets
+
+1. Combina tutti i file CSV metriche:
+```bash
+cat metrics-*.csv > all-metrics.csv
+```
+
+2. Import in Excel/Sheets
+
+3. Crea tabelle pivot:
+    - Rows: num_workers
+    - Columns: approach
+    - Values: total_time_ms (average)
+
+4. Genera grafici:
+    - Line chart: Time vs Workers
+    - Bar chart: Approach comparison
+    - Line chart: Speedup vs Workers
+
+---
+
+## Comandi Quick Reference
+
+```bash
+# Compila
+sbt assembly
+
+# Test locale (AggregateByKey)
+spark-submit --class Main --master local[*] \
+  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
+  test-data.csv output 4 aggregatebykey hash 1
+
+# Upload cloud
+gsutil cp target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar gs://BUCKET/jars/
+
+# Crea cluster
+gcloud dataproc clusters create my-cluster \
+  --region=europe-west1 --num-workers 2 \
+  --master-machine-type=n2-standard-4 --worker-machine-type=n2-standard-4
+
+# Submit job
+gcloud dataproc jobs submit spark \
+  --cluster=my-cluster --region=europe-west1 \
+  --jar=gs://BUCKET/jars/earthquake-cooccurrence-assembly-1.0.jar \
+  -- gs://BUCKET/data/earthquakes-full.csv gs://BUCKET/output/test 8 aggregatebykey hash 2
+
+# Elimina cluster
+gcloud dataproc clusters delete my-cluster --region=europe-west1
+```
+---
+
 ## Troubleshooting
 
 ### Problema: 0 Eventi Caricati
@@ -675,107 +727,6 @@ gsutil iam get gs://YOUR_BUCKET
 
 ---
 
-## Analisi dei Risultati
-
-### Calcolo Speedup
-
-```
-Speedup(n) = T_baseline / T(n)
-
-dove:
-- T_baseline = tempo con 2 workers, GroupByKey, Hash
-- T(n) = tempo configurazione corrente
-```
-
-**Esempio**:
-```
-T_baseline = 120s
-T_current = 80s
-Speedup = 120 / 80 = 1.5x
-```
-
-### Calcolo Strong Scaling Efficiency
-
-```
-Efficiency(n) = T(2) / (n × T(n) / 2)
-
-dove:
-- T(2) = tempo con 2 workers
-- T(n) = tempo con n workers
-- n = numero workers
-```
-
-**Esempio**:
-```
-T(2) = 120s
-T(4) = 40s
-n = 4
-
-Efficiency = 120 / (4 × 40 / 2) = 120 / 80 = 1.5 = 150%
-```
-
-### Import Metriche in Excel/Google Sheets
-
-1. Combina tutti i file CSV metriche:
-```bash
-cat metrics-*.csv > all-metrics.csv
-```
-
-2. Import in Excel/Sheets
-
-3. Crea tabelle pivot:
-    - Rows: num_workers
-    - Columns: approach
-    - Values: total_time_ms (average)
-
-4. Genera grafici:
-    - Line chart: Time vs Workers
-    - Bar chart: Approach comparison
-    - Line chart: Speedup vs Workers
-
----
-
-## Comandi Quick Reference
-
-```bash
-# Compila
-sbt assembly
-
-# Test locale (AggregateByKey)
-spark-submit --class Main --master local[*] \
-  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
-  test-data.csv output 4 aggregatebykey hash 1
-
-# Upload cloud
-gsutil cp target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar gs://BUCKET/jars/
-
-# Crea cluster
-gcloud dataproc clusters create my-cluster \
-  --region=europe-west1 --num-workers 2 \
-  --master-machine-type=n2-standard-4 --worker-machine-type=n2-standard-4
-
-# Submit job
-gcloud dataproc jobs submit spark \
-  --cluster=my-cluster --region=europe-west1 \
-  --jar=gs://BUCKET/jars/earthquake-cooccurrence-assembly-1.0.jar \
-  -- gs://BUCKET/data/earthquakes-full.csv gs://BUCKET/output/test 8 aggregatebykey hash 2
-
-# Elimina cluster
-gcloud dataproc clusters delete my-cluster --region=europe-west1
-```
-
----
-
-## Note Finali
-
-- **Usa AggregateByKey** come default per performance migliori
-- **Hash Partitioner** è più veloce di Range per questo progetto
-- **Testa sempre in locale** prima di andare su cloud
-- **Elimina i cluster** subito dopo l'uso per evitare costi
-- **Salva le metriche CSV** per il report
-
-**Domande?** Consulta i log di Spark per dettagli sugli errori.
-
----
-
-**Fine della Guida Completa** ✅
+**Autore**: Nicola Modugno  
+**Corso**: Scalable and Cloud Programming  
+**A.A.**: 2025-26
