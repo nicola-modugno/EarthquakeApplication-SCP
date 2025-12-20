@@ -2,30 +2,32 @@ name := "earthquake-cooccurrence"
 
 version := "1.0"
 
-scalaVersion := "2.12.18"
+// Spark 4.x richiede Scala 2.13 (NO Scala 3)
+scalaVersion := "2.13.12"
 
-// Dipendenze Spark
+// Dipendenze Spark (allineate a Spark 4.0.1)
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "3.5.0" % "provided",
-  "org.apache.spark" %% "spark-sql" % "3.5.0" % "provided"
+  "org.apache.spark" %% "spark-core" % "4.0.1" % "provided",
+  "org.apache.spark" %% "spark-sql"  % "4.0.1" % "provided"
 )
 
-// Impostazioni per la creazione del JAR
+// Impostazioni per la creazione del JAR assembly
 assembly / assemblyMergeStrategy := {
   case PathList("META-INF", "services", xs @ _*) => MergeStrategy.concat
-  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case "reference.conf" => MergeStrategy.concat
-  case "application.conf" => MergeStrategy.concat
-  case x if x.endsWith(".proto") => MergeStrategy.rename
-  case x if x.contains("hadoop") => MergeStrategy.first
-  case _ => MergeStrategy.first
+  case PathList("META-INF", xs @ _*)            => MergeStrategy.discard
+  case "reference.conf"                         => MergeStrategy.concat
+  case "application.conf"                       => MergeStrategy.concat
+  case x if x.endsWith(".proto")                => MergeStrategy.rename
+  case x if x.contains("hadoop")                => MergeStrategy.first
+  case _                                        => MergeStrategy.first
 }
 
-// Includi Scala library nel JAR per compatibilità locale e cloud
-// (Funziona anche su DataProc, JAR solo un po' più grande)
+// ⚠️ IMPORTANTE:
+// NON includere scala-library né dipendenze Spark nel fat JAR
+// Spark fornisce già tutto a runtime
 assembly / assemblyOption := (assembly / assemblyOption).value
-  .withIncludeScala(true)
-  .withIncludeDependency(true)
+  .withIncludeScala(false)
+  .withIncludeDependency(false)
 
 // Main class
 Compile / mainClass := Some("Main")
@@ -35,24 +37,23 @@ assembly / assemblyJarName := "earthquake-cooccurrence-assembly-1.0.jar"
 
 // Opzioni del compilatore Scala
 scalacOptions ++= Seq(
-  "-deprecation",           // Avvisi su API deprecate
-  "-feature",               // Avvisi su feature sperimentali
-  "-unchecked",             // Avvisi su type erasure
-  "-Xlint",                 // Linting aggiuntivo
-  "-encoding", "UTF-8",     // Encoding sorgenti
-  "-target:jvm-1.8"         // Target JVM 8
+  "-deprecation",        // Avvisi su API deprecate
+  "-feature",            // Avvisi su feature sperimentali
+  "-unchecked",          // Avvisi su type erasure
+  "-Xlint",              // Linting aggiuntivo
+  "-encoding", "UTF-8",
+  "-release", "17"       // Target JVM 17 (richiesto da Spark 4)
 )
 
-// Java version
+// Opzioni compilatore Java
 javacOptions ++= Seq(
-  "-source", "1.8",
-  "-target", "1.8",
+  "--release", "17",
   "-encoding", "UTF-8"
 )
 
-// Evita conflitti con classi duplicate da Spark
+// Evita conflitti con classi duplicate (lasciato invariato, non dannoso)
 assembly / assemblyShadeRules := Seq(
-  ShadeRule.rename("com.google.common.**" -> "shaded.guava.@1").inAll,
+  ShadeRule.rename("com.google.common.**"   -> "shaded.guava.@1").inAll,
   ShadeRule.rename("com.google.protobuf.**" -> "shaded.protobuf.@1").inAll
 )
 
