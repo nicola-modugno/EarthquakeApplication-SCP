@@ -1,4 +1,5 @@
-# Guida Semplice - Come Eseguire il Progetto
+<img title="a title" alt="Alt text" src="blobs/images/splash.png">
+
 
 ## 🏠 PARTE 1: Test in Locale
 
@@ -23,31 +24,16 @@ sbt clean compile
 sbt assembly
 ```
 
-Il JAR verrà creato in: `target/scala-2.12/earthquake-cooccurrence-assembly-1.0.jar`
+Il JAR verrà creato in: `target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar`
 
-### Step 2: Prepara un File di Test
-
-Crea un file `test-data.csv` con questi dati di esempio:
-
-```csv
-latitude,longitude,date
-37.502,15.312,2024-03-12 02:10:00
-38.112,13.372,2024-03-12 05:55:00
-37.521,15.324,2024-03-12 04:32:00
-37.547,15.323,2024-04-01 14:22:00
-38.147,13.324,2024-04-01 21:55:00
-37.535,15.341,2024-04-03 12:32:00
-38.142,13.387,2024-04-03 18:33:00
-```
-
-### Step 3: Esegui Test Locale
+### Step 2: Esegui Test Locale
 
 ```bash
 # Test con approccio 1 (GroupByKey) e Hash partitioner
 spark-submit \
   --class Main \
   --master local[*] \
-  target/scala-2.12/earthquake-cooccurrence-assembly-1.0.jar \
+  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
   test-data.csv \
   output-local-test \
   4 \
@@ -56,10 +42,10 @@ spark-submit \
   1
 
 # Vedi i risultati
-cat output-local-test/part-*
+cat output-test/metrics-readable/part-*
 ```
 
-### Step 4: Test Tutti gli Approcci in Locale
+### Step 3: Test Tutti gli Approcci in Locale
 
 ```bash
 # Script automatico per testare tutto
