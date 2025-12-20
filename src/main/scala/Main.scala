@@ -1,18 +1,17 @@
 import analysis.CoOccurrenceAnalysis
 import extraction.DataExtractor
-import analysis.ExecutionMetrics
-import analysis.MetricsCollector
+import metrics.{ExecutionMetrics, MetricsCollector}
 import org.apache.spark.sql.SparkSession
 import utils.Utils
 
 /**
  * Main per l'analisi delle co-occorrenze di eventi sismici.
- * 
+ *
  * Genera automaticamente metriche in formato CSV per facilitare
  * l'analisi delle performance e la creazione del report.
- * 
+ *
  * Usage: Main <input-file> <output-file> [num-partitions] [approach] [partitioner] [num-workers]
- * 
+ *
  * Parametri:
  *   input-file: Path al CSV di input
  *   output-file: Path directory output
@@ -22,7 +21,7 @@ import utils.Utils
  *   num-workers: Numero di worker nel cluster (default: 1, per metriche)
  */
 object Main {
-  
+
   def main(args: Array[String]): Unit = {
     // Validazione argomenti
     if (args.length < 2) {
@@ -49,7 +48,7 @@ object Main {
     val numWorkers = if (args.length > 5) args(5).toInt else 1
 
     // Inizializzazione Spark
-    val spark = SparkSession.builder
+    val spark = SparkSession.builder()
       .appName("Earthquake Co-occurrence Analysis")
       .getOrCreate()
 
@@ -67,7 +66,7 @@ object Main {
       println("\n[2/4] Analyzing co-occurrences...")
       val startAnalysis = System.currentTimeMillis()
       val result = CoOccurrenceAnalysis.findMaxCoOccurrence(
-        rawData, 
+        rawData,
         numPartitions,
         approach,
         partitioner
@@ -81,10 +80,10 @@ object Main {
         case Some(pair) =>
           val output = Utils.formatOutput(pair, result.dates)
           Utils.saveOutput(spark, output, outputFile)
-          
+
           println(s"✓ Results saved to: $outputFile")
           printResultsSummary(pair, result)
-          
+
         case None =>
           println("⚠ No co-occurrences found")
       }
@@ -92,7 +91,7 @@ object Main {
       // Salvataggio metriche
       println("\n[4/4] Saving metrics...")
       val totalTime = loadTime + analysisTime
-      
+
       val metrics = ExecutionMetrics(
         approach = CoOccurrenceAnalysis.approachName(approach),
         partitioner = CoOccurrenceAnalysis.partitionerName(partitioner),
@@ -106,15 +105,15 @@ object Main {
         totalTimeMs = totalTime,
         maxCoOccurrenceCount = result.maxCount
       )
-      
+
       // Salva metriche in formato CSV
       MetricsCollector.saveMetricsToCsv(spark, metrics, outputFile)
-      
+
       // Salva anche in formato leggibile
       MetricsCollector.saveMetricsReadable(spark, metrics, outputFile)
-      
+
       println(s"✓ Metrics saved to: $outputFile/metrics")
-      
+
       // Stampa performance summary
       printPerformanceSummary(loadTime, analysisTime, totalTime, approach, partitioner)
 
@@ -127,18 +126,18 @@ object Main {
       spark.stop()
     }
   }
-  
+
   /**
    * Stampa l'header con le configurazioni.
    */
   private def printHeader(
-    inputFile: String,
-    outputFile: String,
-    numPartitions: Int,
-    approach: analysis.CoOccurrenceAnalysis.AnalysisApproach,
-    partitioner: analysis.PartitionerType,
-    numWorkers: Int
-  ): Unit = {
+                           inputFile: String,
+                           outputFile: String,
+                           numPartitions: Int,
+                           approach: analysis.CoOccurrenceAnalysis.AnalysisApproach,
+                           partitioner: analysis.PartitionerType,
+                           numWorkers: Int
+                         ): Unit = {
     println("=" * 70)
     println("EARTHQUAKE CO-OCCURRENCE ANALYSIS")
     println("=" * 70)
@@ -150,14 +149,14 @@ object Main {
     println(s"Partitioner: ${CoOccurrenceAnalysis.partitionerName(partitioner)}")
     println("=" * 70)
   }
-  
+
   /**
    * Stampa il sommario dei risultati.
    */
   private def printResultsSummary(
-    pair: analysis.LocationPair,
-    result: analysis.AnalysisResult
-  ): Unit = {
+                                   pair: analysis.LocationPair,
+                                   result: analysis.AnalysisResult
+                                 ): Unit = {
     println("\n" + "=" * 70)
     println("RESULTS SUMMARY")
     println("=" * 70)
@@ -168,10 +167,10 @@ object Main {
     println(s"Total events processed: ${result.totalEvents}")
     println(s"Unique events (after dedup): ${result.uniqueEvents}")
     println(s"Total co-occurrences found: ${result.coOccurrences}")
-    
+
     if (result.dates.nonEmpty) {
       println(s"Date range: ${result.dates.head} to ${result.dates.last}")
-      
+
       if (result.dates.length <= 10) {
         println("\nAll co-occurrence dates:")
         result.dates.foreach(date => println(s"  - $date"))
@@ -182,17 +181,17 @@ object Main {
       }
     }
   }
-  
+
   /**
    * Stampa il sommario delle performance.
    */
   private def printPerformanceSummary(
-    loadTime: Long,
-    analysisTime: Long,
-    totalTime: Long,
-    approach: analysis.CoOccurrenceAnalysis.AnalysisApproach,
-    partitioner: analysis.PartitionerType
-  ): Unit = {
+                                       loadTime: Long,
+                                       analysisTime: Long,
+                                       totalTime: Long,
+                                       approach: analysis.CoOccurrenceAnalysis.AnalysisApproach,
+                                       partitioner: analysis.PartitionerType
+                                     ): Unit = {
     println("\n" + "=" * 70)
     println("PERFORMANCE SUMMARY")
     println("=" * 70)
