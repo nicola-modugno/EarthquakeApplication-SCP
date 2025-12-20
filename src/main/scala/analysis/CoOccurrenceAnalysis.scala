@@ -7,13 +7,13 @@ import utils.Utils
 /**
  * Tipo di partitioner da utilizzare.
  */
-sealed trait PartitionerType
+trait PartitionerType
 case object HashPartitionerType extends PartitionerType
 case object RangePartitionerType extends PartitionerType
 
 object CoOccurrenceAnalysis {
 
-  sealed trait AnalysisApproach
+  trait AnalysisApproach
   case object GroupByKeyApproach extends AnalysisApproach
   case object AggregateByKeyApproach extends AnalysisApproach
   case object ReduceByKeyApproach extends AnalysisApproach
