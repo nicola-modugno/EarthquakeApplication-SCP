@@ -27,13 +27,4 @@ case class Location(
 }
 
 object Location {
-  /**
-   * Crea una Location da una tupla.
-   * 
-   * @param tuple Tupla (latitudine, longitudine)
-   * @return Location corrispondente
-   */
-  def fromTuple(tuple: (Double, Double)): Location = {
-    Location(tuple._1, tuple._2)
-  }
 }
