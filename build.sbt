@@ -21,9 +21,10 @@ assembly / assemblyMergeStrategy := {
   case _ => MergeStrategy.first
 }
 
-// Escludi Scala library dal JAR (fornita da Spark)
+// Includi Scala library nel JAR per compatibilità locale e cloud
+// (Funziona anche su DataProc, JAR solo un po' più grande)
 assembly / assemblyOption := (assembly / assemblyOption).value
-  .withIncludeScala(false)
+  .withIncludeScala(true)
   .withIncludeDependency(true)
 
 // Main class
