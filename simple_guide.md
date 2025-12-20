@@ -1,6 +1,3 @@
-<img title="a title" alt="Alt text" src="blobs/images/splash.png" style="width: 300px; height: 450px;">
-
-
 ## 🏠 PARTE 1: Test in Locale
 
 ### Prerequisiti
