@@ -7,14 +7,13 @@ import utils.Utils
 /**
  * Tipo di partitioner da utilizzare.
  */
-trait PartitionerType
+sealed trait PartitionerType
 case object HashPartitionerType extends PartitionerType
 case object RangePartitionerType extends PartitionerType
 
-
 object CoOccurrenceAnalysis {
 
-  trait AnalysisApproach
+  sealed trait AnalysisApproach
   case object GroupByKeyApproach extends AnalysisApproach
   case object AggregateByKeyApproach extends AnalysisApproach
   case object ReduceByKeyApproach extends AnalysisApproach
@@ -39,13 +38,16 @@ object CoOccurrenceAnalysis {
     println(s"\n=== Using approach: ${approachName(approach)} ===")
     println(s"=== Using partitioner: ${partitionerName(partitionerType)} ===\n")
 
-    approach match {
-      case GroupByKeyApproach =>
+    (approach, partitionerType) match {
+      case (GroupByKeyApproach, pt) =>
+        findMaxCoOccurrenceGroupByKey(events, numPartitions, pt)
+      case (AggregateByKeyApproach, pt) =>
+        findMaxCoOccurrenceAggregateByKey(events, numPartitions, pt)
+      case (ReduceByKeyApproach, pt) =>
+        findMaxCoOccurrenceReduceByKey(events, numPartitions, pt)
+      case _ =>
+        println(s"Warning: Unknown approach, falling back to GroupByKey")
         findMaxCoOccurrenceGroupByKey(events, numPartitions, partitionerType)
-      case AggregateByKeyApproach =>
-        findMaxCoOccurrenceAggregateByKey(events, numPartitions, partitionerType)
-      case ReduceByKeyApproach =>
-        findMaxCoOccurrenceReduceByKey(events, numPartitions, partitionerType)
     }
   }
 
@@ -62,6 +64,9 @@ object CoOccurrenceAnalysis {
         new HashPartitioner(numPartitions)
       case RangePartitionerType =>
         new RangePartitioner(numPartitions, rdd)
+      case _ =>
+        println("Warning: Unknown partitioner type, using Hash")
+        new HashPartitioner(numPartitions)
     }
   }
 
@@ -74,7 +79,7 @@ object CoOccurrenceAnalysis {
                                              partitionerType: PartitionerType
                                            ): AnalysisResult = {
 
-    println("Step 1: Arrotondamento coordinate...")
+    println("Step 1: Normalizzazione coordinate...")
     val normalizedEvents = events
       .map(e => (
         Utils.roundCoordinate(e.latitude),
@@ -86,7 +91,7 @@ object CoOccurrenceAnalysis {
     val totalCount = normalizedEvents.count()
     println(s"Total events loaded: $totalCount")
 
-    println("Step 2: Rimozione eventi duplicati...")
+    println("Step 2: Deduplicazione eventi...")
     val uniqueEvents = normalizedEvents
       .map { case (lat, lon, date) => (Location(lat, lon), date) }
       .distinct()
@@ -137,7 +142,7 @@ object CoOccurrenceAnalysis {
                                                  partitionerType: PartitionerType
                                                ): AnalysisResult = {
 
-    println("Step 1: Arrotondamento coordinate...")
+    println("Step 1: Normalizzazione coordinate...")
     val normalizedEvents = events
       .map(e => (
         Utils.roundCoordinate(e.latitude),
@@ -149,7 +154,7 @@ object CoOccurrenceAnalysis {
     val totalCount = normalizedEvents.count()
     println(s"Total events loaded: $totalCount")
 
-    println("Step 2: Rimozione eventi duplicati...")
+    println("Step 2: Deduplicazione eventi...")
     val uniqueEvents = normalizedEvents
       .map { case (lat, lon, date) => (Location(lat, lon), date) }
       .distinct()
@@ -203,7 +208,7 @@ object CoOccurrenceAnalysis {
                                               partitionerType: PartitionerType
                                             ): AnalysisResult = {
 
-    println("Step 1: Arrotondamento coordinate...")
+    println("Step 1: Normalizzazione coordinate...")
     val normalizedEvents = events
       .map(e => (
         Utils.roundCoordinate(e.latitude),
@@ -215,7 +220,7 @@ object CoOccurrenceAnalysis {
     val totalCount = normalizedEvents.count()
     println(s"Total events loaded: $totalCount")
 
-    println("Step 2: Rimozione eventi duplicati...")
+    println("Step 2: Deduplicazione eventi...")
     val uniqueEvents = normalizedEvents
       .map { case (lat, lon, date) =>
         ((Location(lat, lon), date), 1)
@@ -348,10 +353,12 @@ object CoOccurrenceAnalysis {
     case GroupByKeyApproach => "GroupByKey"
     case AggregateByKeyApproach => "AggregateByKey"
     case ReduceByKeyApproach => "ReduceByKey"
+    case _ => "Unknown"
   }
 
   def partitionerName(partitioner: PartitionerType): String = partitioner match {
     case HashPartitionerType => "Hash"
     case RangePartitionerType => "Range"
+    case _ => "Unknown"
   }
 }
