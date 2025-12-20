@@ -17,15 +17,7 @@ case class LocationPair(
    * Rappresentazione testuale della coppia.
    */
   override def toString: String = s"($first, $second)"
-  
-  /**
-   * Converte la coppia in formato tuple per compatibilità.
-   * 
-   * @return Tupla ((lat1, lon1), (lat2, lon2))
-   */
-  def toTuple: ((Double, Double), (Double, Double)) = {
-    ((first.latitude, first.longitude), (second.latitude, second.longitude))
-  }
+
 }
 
 object LocationPair {
@@ -40,17 +32,5 @@ object LocationPair {
     if (loc1 <= loc2) new LocationPair(loc1, loc2)
     else new LocationPair(loc2, loc1)
   }
-  
-  /**
-   * Crea una LocationPair da tuple.
-   * 
-   * @param tuple1 Prima tupla (lat, lon)
-   * @param tuple2 Seconda tupla (lat, lon)
-   * @return LocationPair ordinata
-   */
-  def fromTuples(tuple1: (Double, Double), tuple2: (Double, Double)): LocationPair = {
-    val loc1 = Location.fromTuple(tuple1)
-    val loc2 = Location.fromTuple(tuple2)
-    apply(loc1, loc2)
-  }
+
 }
