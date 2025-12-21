@@ -119,20 +119,20 @@ sbt compile
 
 # Crea JAR assembly
 sbt assembly
-# Verifica: "Built: .../earthquake-cooccurrence-assembly-1.0.jar"
+# Verifica: "Built: .../earthquake-application.jar"
 ```
 
 ### Verifica JAR Creato
 
 ```bash
 # Linux/Mac
-ls -lh target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar
+ls -lh target/scala-2.13/earthquake-application.jar
 
 # Windows (PowerShell)
-Get-Item target\scala-2.13\earthquake-cooccurrence-assembly-1.0.jar
+Get-Item target\scala-2.13\earthquake-application.jar
 
 # Windows (CMD)
-dir target\scala-2.13\earthquake-cooccurrence-assembly-1.0.jar
+dir target\scala-2.13\earthquake-application.jar
 ```
 
 ---
@@ -146,7 +146,7 @@ spark-submit \
   --class Main \
   --master local[*] \
   --driver-memory 2g \
-  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
+  target/scala-2.13/earthquake-application.jar \
   <INPUT_FILE> \
   <OUTPUT_DIR> \
   <NUM_PARTITIONS> \
@@ -178,7 +178,7 @@ spark-submit \
   --class Main \
   --master local[*] \
   --driver-memory 2g \
-  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
+  target/scala-2.13/earthquake-application.jar \
   test-data.csv \
   output-groupbykey \
   4 \
@@ -191,7 +191,7 @@ spark-submit ^
   --class Main ^
   --master "local[*]" ^
   --driver-memory 2g ^
-  target\scala-2.13\earthquake-cooccurrence-assembly-1.0.jar ^
+  target\scala-2.13\earthquake-application.jar ^
   test-data.csv ^
   output-groupbykey ^
   4 ^
@@ -208,7 +208,7 @@ spark-submit \
   --class Main \
   --master local[*] \
   --driver-memory 2g \
-  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
+  target/scala-2.13/earthquake-application.jar \
   test-data.csv \
   output-aggregatebykey \
   4 \
@@ -221,7 +221,7 @@ spark-submit ^
   --class Main ^
   --master "local[*]" ^
   --driver-memory 2g ^
-  target\scala-2.13\earthquake-cooccurrence-assembly-1.0.jar ^
+  target\scala-2.13\earthquake-application.jar ^
   test-data.csv ^
   output-aggregatebykey ^
   4 ^
@@ -238,7 +238,7 @@ spark-submit \
   --class Main \
   --master local[*] \
   --driver-memory 2g \
-  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
+  target/scala-2.13/earthquake-application.jar \
   test-data.csv \
   output-reducebykey \
   4 \
@@ -251,7 +251,7 @@ spark-submit ^
   --class Main ^
   --master "local[*]" ^
   --driver-memory 2g ^
-  target\scala-2.13\earthquake-cooccurrence-assembly-1.0.jar ^
+  target\scala-2.13\earthquake-application.jar ^
   test-data.csv ^
   output-reducebykey ^
   4 ^
@@ -270,7 +270,7 @@ spark-submit ^
 spark-submit \
   --class Main \
   --master local[*] \
-  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
+  target/scala-2.13/earthquake-application.jar \
   test-data.csv \
   output-hash \
   4 \
@@ -285,7 +285,7 @@ spark-submit \
 spark-submit \
   --class Main \
   --master local[*] \
-  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
+  target/scala-2.13/earthquake-application.jar \
   test-data.csv \
   output-range \
   4 \
@@ -346,7 +346,7 @@ BUCKET_NAME="earthquake-YOUR_MATRICOLA"
 gsutil mb gs://$BUCKET_NAME/
 
 # 2. Upload JAR
-gsutil cp target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
+gsutil cp target/scala-2.13/earthquake-application.jar \
   gs://$BUCKET_NAME/jars/
 
 # 3. Upload dataset
@@ -380,7 +380,7 @@ gcloud dataproc clusters list --region=europe-west1
 gcloud dataproc jobs submit spark \
   --cluster=earthquake-cluster-2w \
   --region=europe-west1 \
-  --jar=gs://$BUCKET_NAME/jars/earthquake-cooccurrence-assembly-1.0.jar \
+  --jar=gs://$BUCKET_NAME/jars/earthquake-application.jar \
   -- gs://$BUCKET_NAME/data/earthquakes-full.csv \
      gs://$BUCKET_NAME/output/2w-groupbykey-hash \
      8 \
@@ -395,7 +395,7 @@ gcloud dataproc jobs submit spark \
 gcloud dataproc jobs submit spark \
   --cluster=earthquake-cluster-2w \
   --region=europe-west1 \
-  --jar=gs://$BUCKET_NAME/jars/earthquake-cooccurrence-assembly-1.0.jar \
+  --jar=gs://$BUCKET_NAME/jars/earthquake-application.jar \
   -- gs://$BUCKET_NAME/data/earthquakes-full.csv \
      gs://$BUCKET_NAME/output/2w-aggregatebykey-hash \
      8 \
@@ -410,7 +410,7 @@ gcloud dataproc jobs submit spark \
 gcloud dataproc jobs submit spark \
   --cluster=earthquake-cluster-2w \
   --region=europe-west1 \
-  --jar=gs://$BUCKET_NAME/jars/earthquake-cooccurrence-assembly-1.0.jar \
+  --jar=gs://$BUCKET_NAME/jars/earthquake-application.jar \
   -- gs://$BUCKET_NAME/data/earthquakes-full.csv \
      gs://$BUCKET_NAME/output/2w-reducebykey-hash \
      8 \
@@ -468,7 +468,7 @@ gcloud dataproc clusters delete earthquake-cluster-2w \
 
 BUCKET="YOUR_BUCKET_NAME"
 DATASET="earthquakes-full.csv"
-JAR="gs://$BUCKET/jars/earthquake-cooccurrence-assembly-1.0.jar"
+JAR="gs://$BUCKET/jars/earthquake-application.jar"
 DATA="gs://$BUCKET/data/$DATASET"
 REGION="europe-west1"
 
@@ -612,11 +612,11 @@ sbt assembly
 
 # Test locale (AggregateByKey)
 spark-submit --class Main --master local[*] \
-  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
+  target/scala-2.13/earthquake-application.jar \
   test-data.csv output 4 aggregatebykey hash 1
 
 # Upload cloud
-gsutil cp target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar gs://BUCKET/jars/
+gsutil cp target/scala-2.13/earthquake-application.jar gs://BUCKET/jars/
 
 # Crea cluster
 gcloud dataproc clusters create my-cluster \
@@ -626,7 +626,7 @@ gcloud dataproc clusters create my-cluster \
 # Submit job
 gcloud dataproc jobs submit spark \
   --cluster=my-cluster --region=europe-west1 \
-  --jar=gs://BUCKET/jars/earthquake-cooccurrence-assembly-1.0.jar \
+  --jar=gs://BUCKET/jars/earthquake-application.jar \
   -- gs://BUCKET/data/earthquakes-full.csv gs://BUCKET/output/test 8 aggregatebykey hash 2
 
 # Elimina cluster
@@ -678,7 +678,7 @@ Error: Failed to load class Main
 **Soluzione**:
 ```bash
 # Verifica che il JAR esista
-ls -la target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar
+ls -la target/scala-2.13/earthquake-application.jar
 
 # Se non esiste, ricompila
 sbt clean assembly
