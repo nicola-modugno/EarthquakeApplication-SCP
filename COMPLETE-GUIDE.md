@@ -93,19 +93,20 @@ sbt compile
 
 # Crea JAR assembly
 sbt assembly
+# Verifica: "Built: .../earthquake-application.jar"
 ```
 
 ### Verifica JAR Creato
 
 ```bash
 # Linux/Mac
-ls -lh target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar
+ls -lh target/scala-2.13/earthquake-application.jar
 
 # Windows (PowerShell)
-Get-Item target\scala-2.13\earthquake-cooccurrence-assembly-1.0.jar
+Get-Item target\scala-2.13\earthquake-application.jar
 
 # Windows (CMD)
-dir target\scala-2.13\earthquake-cooccurrence-assembly-1.0.jar
+dir target\scala-2.13\earthquake-application.jar
 ```
 
 ---
@@ -119,7 +120,40 @@ dir target\scala-2.13\earthquake-cooccurrence-assembly-1.0.jar
 spark-submit \
   --class Main \
   --master local[*] \
-  target/scala-2.13/earthquake-cooccurrence-assembly-1.0.jar \
+  --driver-memory 2g \
+  target/scala-2.13/earthquake-application.jar \
+  <INPUT_FILE> \
+  <OUTPUT_DIR> \
+  <NUM_PARTITIONS> \
+  <APPROACH> \
+  <PARTITIONER> \
+  <NUM_WORKERS>
+```
+
+### Specifiche Parametri
+
+| Parametro | Descrizione | Valori | Default |
+|-----------|-------------|--------|---------|
+| INPUT_FILE | Path al CSV | es. `test-data.csv` | - |
+| OUTPUT_DIR | Directory output | es. `output-test` | - |
+| NUM_PARTITIONS | Numero partizioni | 4, 8, 12, 16 | 8 |
+| APPROACH | Algoritmo | `groupbykey`, `aggregatebykey`, `reducebykey` | `groupbykey` |
+| PARTITIONER | Tipo partitioner | `hash`, `range` | `hash` |
+| NUM_WORKERS | Numero workers | 1 (locale), 2-4 (cloud) | 1 |
+
+---
+
+## Esempi per Ogni Approccio
+
+### Approccio 1: GroupByKey
+
+```bash
+# Linux/Mac/Git Bash
+spark-submit \
+  --class Main \
+  --master local[*] \
+  --driver-memory 2g \
+  target/scala-2.13/earthquake-application.jar \
   test-data.csv \
   output-local-test \
   4 \
@@ -127,16 +161,48 @@ spark-submit \
   hash \
   1
 
-# Vedi i risultati
-cat output-test/metrics-readable/part-*
+# Windows CMD
+spark-submit ^
+  --class Main ^
+  --master "local[*]" ^
+  --driver-memory 2g ^
+  target\scala-2.13\earthquake-application.jar ^
+  test-data.csv ^
+  output-groupbykey ^
+  4 ^
+  groupbykey ^
+  hash ^
+  1
 ```
 
 ### Step 3: Test Tutti gli Approcci in Locale
 
 ```bash
-# Script automatico per testare tutto
-chmod +x test-all-approaches.sh
-./test-all-approaches.sh
+# Linux/Mac/Git Bash
+spark-submit \
+  --class Main \
+  --master local[*] \
+  --driver-memory 2g \
+  target/scala-2.13/earthquake-application.jar \
+  test-data.csv \
+  output-aggregatebykey \
+  4 \
+  aggregatebykey \
+  hash \
+  1
+
+# Windows CMD
+spark-submit ^
+  --class Main ^
+  --master "local[*]" ^
+  --driver-memory 2g ^
+  target\scala-2.13\earthquake-application.jar ^
+  test-data.csv ^
+  output-aggregatebykey ^
+  4 ^
+  aggregatebykey ^
+  hash ^
+  1
 ```
 
 Questo testerà:
@@ -144,7 +210,33 @@ Questo testerà:
 - ✅ AggregateByKey  
 - ✅ ReduceByKey
 
-E verificherà che producano tutti lo stesso risultato.
+```bash
+# Linux/Mac/Git Bash
+spark-submit \
+  --class Main \
+  --master local[*] \
+  --driver-memory 2g \
+  target/scala-2.13/earthquake-application.jar \
+  test-data.csv \
+  output-reducebykey \
+  4 \
+  reducebykey \
+  hash \
+  1
+
+# Windows CMD
+spark-submit ^
+  --class Main ^
+  --master "local[*]" ^
+  --driver-memory 2g ^
+  target\scala-2.13\earthquake-application.jar ^
+  test-data.csv ^
+  output-reducebykey ^
+  4 ^
+  reducebykey ^
+  hash ^
+  1
+```
 
 ---
 
@@ -153,24 +245,32 @@ E verificherà che producano tutti lo stesso risultato.
 ### Prerequisiti Google Cloud
 
 ```bash
-# Installa Google Cloud SDK (se non l'hai già)
-# Visita: https://cloud.google.com/sdk/docs/install
-
-# Fai login
-gcloud auth login
-
-# Imposta il progetto (usa il TUO project ID)
-gcloud config set project YOUR_PROJECT_ID
-
-# Verifica
-gcloud config list
+spark-submit \
+  --class Main \
+  --master local[*] \
+  target/scala-2.13/earthquake-application.jar \
+  test-data.csv \
+  output-hash \
+  4 \
+  aggregatebykey \
+  hash \
+  1
 ```
 
 ### Step 1: Crea un Bucket su Google Cloud Storage
 
 ```bash
-# Scegli un nome univoco per il bucket
-BUCKET_NAME="earthquake-analysis-TUOMATRICOLA"
+spark-submit \
+  --class Main \
+  --master local[*] \
+  target/scala-2.13/earthquake-application.jar \
+  test-data.csv \
+  output-range \
+  4 \
+  aggregatebykey \
+  range \
+  1
+```
 
 ---
 
@@ -223,15 +323,8 @@ co_occurrences,load_time_ms,analysis_time_ms,total_time_ms,max_count,timestamp
 BUCKET_NAME="earthquake-YOUR_MATRICOLA"
 gsutil mb gs://$BUCKET_NAME/
 
-# Verifica
-gsutil ls
-```
-
-### Step 2: Upload del JAR e Dataset
-
-```bash
-# Upload JAR
-gsutil cp target/scala-2.12/earthquake-cooccurrence-assembly-1.0.jar \
+# 2. Upload JAR
+gsutil cp target/scala-2.13/earthquake-application.jar \
   gs://$BUCKET_NAME/jars/
 
 # Upload del dataset (usa il TUO file!)
@@ -268,9 +361,9 @@ REGION="europe-west1"
 
 # Esegui job con GroupByKey e Hash partitioner
 gcloud dataproc jobs submit spark \
-  --cluster=$CLUSTER_NAME \
-  --region=$REGION \
-  --jar=gs://$BUCKET_NAME/jars/earthquake-cooccurrence-assembly-1.0.jar \
+  --cluster=earthquake-cluster-2w \
+  --region=europe-west1 \
+  --jar=gs://$BUCKET_NAME/jars/earthquake-application.jar \
   -- gs://$BUCKET_NAME/data/earthquakes-full.csv \
      gs://$BUCKET_NAME/output/test-run \
      8 \
@@ -284,20 +377,50 @@ gcloud dataproc jobs submit spark \
 ### Step 5: Scarica i Risultati
 
 ```bash
-# Scarica output
-gsutil cp -r gs://$BUCKET_NAME/output/test-run ./results-test/
-
-# Vedi il risultato
-cat results-test/part-*
-
-# Vedi le metriche
-cat results-test/metrics/part-*
+gcloud dataproc jobs submit spark \
+  --cluster=earthquake-cluster-2w \
+  --region=europe-west1 \
+  --jar=gs://$BUCKET_NAME/jars/earthquake-application.jar \
+  -- gs://$BUCKET_NAME/data/earthquakes-full.csv \
+     gs://$BUCKET_NAME/output/2w-aggregatebykey-hash \
+     8 \
+     aggregatebykey \
+     hash \
+     2
 ```
 
 ### Step 6: Elimina il Cluster (IMPORTANTE!)
 
 ```bash
-# Elimina il cluster per non consumare crediti
+gcloud dataproc jobs submit spark \
+  --cluster=earthquake-cluster-2w \
+  --region=europe-west1 \
+  --jar=gs://$BUCKET_NAME/jars/earthquake-application.jar \
+  -- gs://$BUCKET_NAME/data/earthquakes-full.csv \
+     gs://$BUCKET_NAME/output/2w-reducebykey-hash \
+     8 \
+     reducebykey \
+     hash \
+     2
+```
+
+### Download Risultati
+
+```bash
+# Download output
+gsutil cp -r gs://$BUCKET_NAME/output/2w-aggregatebykey-hash ./results/
+
+# Visualizza risultato
+gsutil cat gs://$BUCKET_NAME/output/2w-aggregatebykey-hash/part-*
+
+# Visualizza metriche
+gsutil cat gs://$BUCKET_NAME/output/2w-aggregatebykey-hash/metrics/part-*
+```
+
+### Eliminazione Cluster
+
+```bash
+# IMPORTANTE: Elimina sempre il cluster per non consumare crediti!
 gcloud dataproc clusters delete earthquake-cluster-2w \
   --region=europe-west1
 ```
@@ -311,10 +434,11 @@ gcloud dataproc clusters delete earthquake-cluster-2w \
 ```bash
 chmod +x run-complete-experiments.sh
 
-# Questo eseguirà TUTTI i 18 esperimenti:
-# - 3 approcci × 2 partitioners × 3 configurazioni workers
-./run-complete-experiments.sh YOUR_BUCKET_NAME earthquakes-full.csv
-```
+BUCKET="YOUR_BUCKET_NAME"
+DATASET="earthquakes-full.csv"
+JAR="gs://$BUCKET/jars/earthquake-application.jar"
+DATA="gs://$BUCKET/data/$DATASET"
+REGION="europe-west1"
 
 Lo script farà TUTTO automaticamente:
 1. ✅ Crea cluster 2 workers → esegue 6 esperimenti → elimina cluster
@@ -400,6 +524,27 @@ GroupByKey,Hash,2,8,1000000,950000,50000,12345,45678,58023,150,1234567890
 
 ### MINIMO (Per consegna base):
 
+# Test locale (AggregateByKey)
+spark-submit --class Main --master local[*] \
+  target/scala-2.13/earthquake-application.jar \
+  test-data.csv output 4 aggregatebykey hash 1
+
+# Upload cloud
+gsutil cp target/scala-2.13/earthquake-application.jar gs://BUCKET/jars/
+
+# Crea cluster
+gcloud dataproc clusters create my-cluster \
+  --region=europe-west1 --num-workers 2 \
+  --master-machine-type=n2-standard-4 --worker-machine-type=n2-standard-4
+
+# Submit job
+gcloud dataproc jobs submit spark \
+  --cluster=my-cluster --region=europe-west1 \
+  --jar=gs://BUCKET/jars/earthquake-application.jar \
+  -- gs://BUCKET/data/earthquakes-full.csv gs://BUCKET/output/test 8 aggregatebykey hash 2
+
+# Elimina cluster
+gcloud dataproc clusters delete my-cluster --region=europe-west1
 ```
 ✅ 2 workers: GroupByKey-Hash
 ✅ 3 workers: GroupByKey-Hash  
@@ -430,9 +575,11 @@ gcloud dataproc clusters delete CLUSTER_NAME --region=europe-west1
 
 ### 2. Controlla i Costi
 ```bash
-# Vedi quanto stai spendendo
-gcloud billing accounts list
-# Vai su: https://console.cloud.google.com/billing
+# Verifica che il JAR esista
+ls -la target/scala-2.13/earthquake-application.jar
+
+# Se non esiste, ricompila
+sbt clean assembly
 ```
 
 ### 3. Dataset Corretto
