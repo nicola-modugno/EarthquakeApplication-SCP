@@ -4,26 +4,14 @@ import analysis.ExecutionMetrics
 import analysis.MetricsCollector
 import org.apache.spark.sql.SparkSession
 import utils.Utils
+import org.apache.log4j.{Level, Logger}
 
-/**
- * Main per l'analisi delle co-occorrenze di eventi sismici.
- *
- * Genera automaticamente metriche in formato CSV per facilitare
- * l'analisi delle performance e la creazione del report.
- *
- * Usage: Main <input-file> <output-file> [num-partitions] [approach] [partitioner] [num-workers]
- *
- * Parametri:
- *   input-file: Path al CSV di input
- *   output-file: Path directory output
- *   num-partitions: Numero di partizioni (default: 8)
- *   approach: 1|groupbykey, 2|aggregatebykey, 3|reducebykey (default: 1)
- *   partitioner: hash|range (default: hash)
- *   num-workers: Numero di worker nel cluster (default: 1, per metriche)
- */
 object Main {
 
   def main(args: Array[String]): Unit = {
+    // Configurazione logging per sopprimere errori di cleanup non critici
+    configureLogging()
+
     // Validazione argomenti
     if (args.length < 2) {
       println("Usage: Main <input-file> <output-file> [num-partitions] [approach] [partitioner] [num-workers]")
@@ -48,12 +36,17 @@ object Main {
     }
     val numWorkers = if (args.length > 5) args(5).toInt else 1
 
-    // Inizializzazione Spark
+    // Inizializzazione Spark con configurazioni per Windows
     val spark = SparkSession.builder()
       .appName("Earthquake Co-occurrence Analysis")
+      .config("spark.driver.host", "localhost")
+      .config("spark.driver.bindAddress", "127.0.0.1")
+      .config("spark.ui.showConsoleProgress", "false")
       .getOrCreate()
 
     printHeader(inputFile, outputFile, numPartitions, approach, partitioner, numWorkers)
+
+    var exitCode = 0
 
     try {
       // Caricamento dati
@@ -122,9 +115,48 @@ object Main {
       case e: Exception =>
         println(s"\n✗ Error during execution: ${e.getMessage}")
         e.printStackTrace()
-        System.exit(1)
+        exitCode = 1
     } finally {
+      // Shutdown controllato
+      shutdownSparkGracefully(spark)
+    }
+
+    System.exit(exitCode)
+  }
+
+  /**
+   * Configura il logging per sopprimere messaggi non critici.
+   */
+  private def configureLogging(): Unit = {
+    // Sopprime WARN ed ERROR di cleanup (non critici)
+    Logger.getLogger("org.apache.spark.util.ShutdownHookManager").setLevel(Level.FATAL)
+    Logger.getLogger("org.apache.spark.SparkEnv").setLevel(Level.FATAL)
+    Logger.getLogger("org.apache.spark.util.Utils").setLevel(Level.ERROR)
+
+    // Mantieni INFO per i log importanti
+    Logger.getLogger("org.apache.spark.SparkContext").setLevel(Level.INFO)
+
+    // Riduci verbosità generale
+    Logger.getRootLogger.setLevel(Level.WARN)
+  }
+
+  /**
+   * Shutdown graceful di Spark che previene eccezioni di cleanup.
+   */
+  private def shutdownSparkGracefully(spark: SparkSession): Unit = {
+    try {
+      println("\nShutting down Spark gracefully...")
+
+      // Stop della sessione (non del context direttamente)
       spark.stop()
+
+      // Piccola pausa per permettere cleanup asincrono
+      Thread.sleep(500)
+
+      println("✓ Spark shutdown completed")
+    } catch {
+      case _: Exception =>
+      // Ignora eccezioni durante shutdown - sono previste su Windows
     }
   }
 

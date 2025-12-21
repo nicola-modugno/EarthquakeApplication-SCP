@@ -1,14 +1,15 @@
-name := "earthquake-cooccurrence"
+name := "earthquake-application"
 
 version := "1.0"
 
-// Spark 4.x richiede Scala 2.13 (NO Scala 3)
+
 scalaVersion := "2.13.12"
 
-// Dipendenze Spark (allineate a Spark 4.0.1)
+
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % "4.0.1" % "provided",
-  "org.apache.spark" %% "spark-sql"  % "4.0.1" % "provided"
+  "org.apache.spark" %% "spark-sql"  % "4.0.1" % "provided",
+  "log4j" % "log4j" % "1.2.17"
 )
 
 // Impostazioni per la creazione del JAR assembly
@@ -22,9 +23,7 @@ assembly / assemblyMergeStrategy := {
   case _                                        => MergeStrategy.first
 }
 
-// ⚠️ IMPORTANTE:
-// NON includere scala-library né dipendenze Spark nel fat JAR
-// Spark fornisce già tutto a runtime
+
 assembly / assemblyOption := (assembly / assemblyOption).value
   .withIncludeScala(false)
   .withIncludeDependency(false)
@@ -33,25 +32,25 @@ assembly / assemblyOption := (assembly / assemblyOption).value
 Compile / mainClass := Some("Main")
 
 // Nome del JAR assembly
-assembly / assemblyJarName := "earthquake-cooccurrence-assembly-1.0.jar"
+assembly / assemblyJarName := "earthquake-application.jar"
 
 // Opzioni del compilatore Scala
 scalacOptions ++= Seq(
-  "-deprecation",        // Avvisi su API deprecate
-  "-feature",            // Avvisi su feature sperimentali
-  "-unchecked",          // Avvisi su type erasure
-  "-Xlint",              // Linting aggiuntivo
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  "-Xlint",
   "-encoding", "UTF-8",
-  "-release", "17"       // Target JVM 17 (richiesto da Spark 4)
+  "-release", "17"
 )
 
-// Opzioni compilatore Java
+
+
 javacOptions ++= Seq(
   "--release", "17",
   "-encoding", "UTF-8"
 )
 
-// Evita conflitti con classi duplicate (lasciato invariato, non dannoso)
 assembly / assemblyShadeRules := Seq(
   ShadeRule.rename("com.google.common.**"   -> "shaded.guava.@1").inAll,
   ShadeRule.rename("com.google.protobuf.**" -> "shaded.protobuf.@1").inAll
