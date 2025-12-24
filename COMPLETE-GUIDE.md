@@ -1,6 +1,9 @@
-# Earthquake Application - Complete Guide
+<img title="guida" alt="Alt text" src="./blobs/guide.png">
 
-**Guida Completa per l'Esecuzione del Progetto**
+---
+# Earthquake Application - Guida all'uso
+
+**Guida completa per l'esecuzione del progetto**
 
 ---
 

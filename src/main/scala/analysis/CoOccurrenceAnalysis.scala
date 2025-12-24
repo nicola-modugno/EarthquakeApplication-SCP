@@ -103,14 +103,10 @@ object CoOccurrenceAnalysis {
     val uniqueCount = partitionedEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
-    /*println("Step 3: Raggruppamento per data (groupByKey)...")
+    println("Step 3: Raggruppamento per data (groupByKey)...")
     val eventsByDate = partitionedEvents
       .map { case (location, date) => (date, location) }
-      .partitionBy(partitioner)*/
-
-    val eventsByDate = partitionedEvents
-      .map { case (location, date) => (date, location) }
-      .partitionBy(new HashPartitioner(numPartitions))
+      .partitionBy(partitioner)
 
     val locationsByDate = eventsByDate.groupByKey()
 
@@ -169,20 +165,10 @@ object CoOccurrenceAnalysis {
     val uniqueCount = partitionedEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
-    /*println("Step 3: Aggregazione per data (aggregateByKey)...")
-    val eventsByDate = partitionedEvents
-      .map { case (location, date) => (date, location) }
-      .partitionBy(partitioner)
-
-    val locationsByDate = eventsByDate
-      .aggregateByKey(Set.empty[Location])(
-        (set, loc) => set + loc,
-        (set1, set2) => set1 ++ set2
-      )*/
     println("Step 3: Aggregazione per data (aggregateByKey)...")
     val eventsByDate = partitionedEvents
       .map { case (location, date) => (date, location) }
-      .partitionBy(new HashPartitioner(numPartitions))
+      .partitionBy(partitioner)
 
     val locationsByDate = eventsByDate
       .aggregateByKey(Set.empty[Location])(
@@ -248,22 +234,10 @@ object CoOccurrenceAnalysis {
     val uniqueCount = partitionedEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
-    /*println("Step 3: Aggregazione località per data...")
-    val eventsByDate = partitionedEvents
-      .map { case (location, date) => (date, location) }
-      .partitionBy(partitioner)
-
-    val locationsByDate = eventsByDate
-      .aggregateByKey(Set.empty[Location])(
-        (set, loc) => set + loc,
-        (set1, set2) => set1 ++ set2
-      )*/
-
     println("Step 3: Aggregazione località per data...")
     val eventsByDate = partitionedEvents
       .map { case (location, date) => (date, location) }
-      // ✅ CORREZIONE: usa nuovo HashPartitioner per le date
-      .partitionBy(new HashPartitioner(numPartitions))
+      .partitionBy(partitioner)
 
     val locationsByDate = eventsByDate
       .aggregateByKey(Set.empty[Location])(

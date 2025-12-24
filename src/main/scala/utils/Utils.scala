@@ -12,14 +12,14 @@ import scala.math.BigDecimal.RoundingMode
 object Utils {
   
   /**
-   * Arrotonda una coordinata alla prima cifra decimale con arrotondamento HALF_UP.
+   * Scartare le cifre decimali successivi alla prima di una coordinata: arrotondamento con DOWN.
    * Es: 112.234 -> 112.2, 112.251 -> 112.3
    * 
    * @param coord Coordinata da arrotondare
    * @return Coordinata arrotondata alla prima cifra decimale
    */
   def roundCoordinate(coord: Double): Double = {
-    BigDecimal(coord).setScale(1, RoundingMode.HALF_UP).toDouble
+    BigDecimal(coord).setScale(1, RoundingMode.DOWN).toDouble
   }
   
   /**
