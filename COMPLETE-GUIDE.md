@@ -1,11 +1,28 @@
 ## 🏠 PARTE 1: Test in Locale
 
-### Prerequisiti
-- Java 17
-- Scala 2.13.x
-- SBT
-- Apache Spark 4.0.1 (per test locali)
-- Google Cloud SDK (per DataProc)
+---
+# Earthquake Application - Guida all'uso
+
+**Guida completa per l'esecuzione del progetto**
+
+
+## 📋 Indice
+
+1. [Prerequisiti](#prerequisiti)
+2. [Setup Iniziale](#setup-iniziale)
+3. [Compilazione](#compilazione)
+4. [Test Locali](#test-locali)
+5. [Esecuzione su Google Cloud](#esecuzione-su-google-cloud)
+6. [Configurazioni e Parametri](#configurazioni-e-parametri)
+7. [Esempi per Ogni Approccio](#esempi-per-ogni-approccio)
+8. [Analisi dei Risultati](#analisi-dei-risultati)
+9. [Troubleshooting](#troubleshooting)
+
+---
+
+## Prerequisiti
+
+### Software Necessario
 
 ```bash
 # Per verificare di avere tutto installato
