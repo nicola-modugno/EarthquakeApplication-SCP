@@ -5,6 +5,7 @@
 
 **Guida completa per l'esecuzione del progetto**
 
+---
 
 ## 📋 Indice
 
