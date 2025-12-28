@@ -1,10 +1,8 @@
 package analysis
 
 import org.apache.spark.sql.SparkSession
+import utils.Utils
 
-/**
- * Raccoglie e salva metriche di performance per l'analisi.
- */
 object MetricsCollector {
 
   val CSV_HEADER: String = "approach,partitioner,num_workers,num_partitions,total_events,unique_events," +
@@ -12,7 +10,6 @@ object MetricsCollector {
 
   /**
    * Salva le metriche in un file CSV.
-   * Se il file esiste, appende una nuova riga; altrimenti crea il file con header.
    */
   def saveMetricsToCsv(
                         spark: SparkSession,
@@ -20,17 +17,18 @@ object MetricsCollector {
                         outputPath: String
                       ): Unit = {
     val sc = spark.sparkContext
+    val metricsPath = outputPath + "/metrics"
 
-    // Crea RDD con header + dati
+    // Elimina directory esistente
+    Utils.deletePathIfExists(spark, metricsPath)
+
     val content = s"$CSV_HEADER\n${metrics.toCsvRow}"
     val rdd = sc.parallelize(Seq(content))
-
-    // Salva con coalesce(1) per avere un solo file
-    rdd.coalesce(1).saveAsTextFile(outputPath + "/metrics")
+    rdd.coalesce(1).saveAsTextFile(metricsPath)
   }
 
   /**
-   * Salva le metriche in formato leggibile per debugging.
+   * Salva le metriche in formato leggibile.
    */
   def saveMetricsReadable(
                            spark: SparkSession,
@@ -38,12 +36,13 @@ object MetricsCollector {
                            outputPath: String
                          ): Unit = {
     val sc = spark.sparkContext
+    val readablePath = outputPath + "/metrics-readable"
+
+    // Elimina directory esistente
+    Utils.deletePathIfExists(spark, readablePath)
+
     val rdd = sc.parallelize(Seq(metrics.toReadableString))
-    rdd.coalesce(1).saveAsTextFile(outputPath + "/metrics-readable")
+    rdd.coalesce(1).saveAsTextFile(readablePath)
   }
 
 }
-
-
-
-

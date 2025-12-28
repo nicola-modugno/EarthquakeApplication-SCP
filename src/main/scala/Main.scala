@@ -9,10 +9,8 @@ import org.apache.log4j.{Level, Logger}
 object Main {
 
   def main(args: Array[String]): Unit = {
-    // Configurazione logging per sopprimere errori di cleanup non critici
     configureLogging()
 
-    // Validazione argomenti
     if (args.length < 2) {
       println("Usage: Main <input-file> <output-file> [num-partitions] [approach] [partitioner] [num-workers]")
       println("  approach: 1|groupbykey (default), 2|aggregatebykey, 3|reducebykey")
@@ -22,7 +20,7 @@ object Main {
     }
 
     val inputFile = args(0)
-    val outputFile = args(1)
+    val baseOutputFile = args(1)
     val numPartitions = if (args.length > 2) args(2).toInt else 8
     val approach = if (args.length > 3) {
       CoOccurrenceAnalysis.parseApproach(args(3))
@@ -36,7 +34,15 @@ object Main {
     }
     val numWorkers = if (args.length > 5) args(5).toInt else 1
 
-    // Inizializzazione Spark con configurazioni per Windows
+    // Crea nome output con partitioner
+    val partitionerSuffix = partitioner match {
+      case analysis.HashPartitionerType => "hash"
+      case analysis.RangePartitionerType => "range"
+      case _ => "hash"
+    }
+    //val outputFile = s"${baseOutputFile}-${partitionerSuffix}"
+    val outputFile = baseOutputFile
+
     val spark = SparkSession.builder()
       .appName("Earthquake Co-occurrence Analysis")
       .config("spark.driver.host", "localhost")
