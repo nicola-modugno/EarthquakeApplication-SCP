@@ -466,24 +466,18 @@ gcloud dataproc clusters delete earthquake-cluster-2w \
 ```bash
 #!/bin/bash
 
-BUCKET="YOUR_BUCKET_NAME"
-DATASET="earthquakes-full.csv"
+BUCKET="bucket_scp_1"
+DATASET="dataset-earthquakes-full.csv"
 JAR="gs://$BUCKET/jars/earthquake-application.jar"
 DATA="gs://$BUCKET/data/$DATASET"
 REGION="europe-west1"
 
-# Array configurazioni
+# Configurazioni ridotte per quota CPU
 declare -a CONFIGS=(
   "2:8:groupbykey:hash"
   "2:8:aggregatebykey:hash"
   "2:8:reducebykey:hash"
   "2:8:aggregatebykey:range"
-  "3:12:groupbykey:hash"
-  "3:12:aggregatebykey:hash"
-  "3:12:reducebykey:hash"
-  "4:16:groupbykey:hash"
-  "4:16:aggregatebykey:hash"
-  "4:16:reducebykey:hash"
 )
 
 for config in "${CONFIGS[@]}"; do
@@ -501,11 +495,12 @@ for config in "${CONFIGS[@]}"; do
     echo "Creating cluster $cluster..."
     gcloud dataproc clusters create $cluster \
       --region=$REGION \
+      --image-version=2.2-debian12 \
       --num-workers $workers \
       --master-boot-disk-size 240 \
       --worker-boot-disk-size 240 \
-      --master-machine-type=n2-standard-4 \
-      --worker-machine-type=n2-standard-4 \
+      --master-machine-type=n2-standard-2 \
+      --worker-machine-type=n2-standard-2 \
       --quiet
   fi
   
@@ -517,21 +512,21 @@ for config in "${CONFIGS[@]}"; do
     --jar=$JAR \
     -- $DATA $output $partitions $approach $partitioner $workers
   
-  # Download metriche
-  gsutil cp ${output}/metrics/part-* metrics-${workers}w-${approach}-${partitioner}.csv
+  # Download metriche (usa python3 invece di python3.12)
+  if command -v python3 &> /dev/null; then
+    gsutil cp ${output}/metrics/part-* metrics-${workers}w-${approach}-${partitioner}.csv 2>/dev/null || true
+  fi
   
   echo "Done!"
   echo ""
 done
 
-# Elimina tutti i cluster
-for workers in 2 3 4; do
-  cluster="earthquake-cluster-${workers}w"
-  if gcloud dataproc clusters describe $cluster --region=$REGION &>/dev/null; then
-    echo "Deleting cluster $cluster..."
-    gcloud dataproc clusters delete $cluster --region=$REGION --quiet
-  fi
-done
+# Elimina cluster
+cluster="earthquake-cluster-2w"
+if gcloud dataproc clusters describe $cluster --region=$REGION &>/dev/null; then
+  echo "Deleting cluster $cluster..."
+  gcloud dataproc clusters delete $cluster --region=$REGION --quiet
+fi
 
 echo "All experiments completed!"
 ```
