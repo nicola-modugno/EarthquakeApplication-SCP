@@ -35,18 +35,17 @@ object Main {
     val numWorkers = if (args.length > 5) args(5).toInt else 1
 
     // Crea nome output con partitioner
-    val partitionerSuffix = partitioner match {
+    /*val partitionerSuffix = partitioner match {
       case analysis.HashPartitionerType => "hash"
       case analysis.RangePartitionerType => "range"
       case _ => "hash"
     }
-    //val outputFile = s"${baseOutputFile}-${partitionerSuffix}"
+    //val outputFile = s"${baseOutputFile}-${partitionerSuffix}"*/
     val outputFile = baseOutputFile
 
+    // Spark/YARN gestirà automaticamente la configurazione di rete
     val spark = SparkSession.builder()
       .appName("Earthquake Co-occurrence Analysis")
-      .config("spark.driver.host", "localhost")
-      .config("spark.driver.bindAddress", "127.0.0.1")
       .config("spark.ui.showConsoleProgress", "false")
       .getOrCreate()
 

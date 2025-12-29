@@ -3,18 +3,6 @@
   <component name="ScalaCompilerConfiguration">
     <option name="separateProdTestSources" value="true" />
     <profile name="sbt 1" modules="EarthquakeCoOccurrenceAnalysis-SACP,EarthquakeCoOccurrenceAnalysis-SACP.main,EarthquakeCoOccurrenceAnalysis-SACP.test,earthquake-application,earthquake-cooccurrence,earthquakecooccurrenceanalysis-sacp,earthquakecooccurrenceanalysis-sacp.main,earthquakecooccurrenceanalysis-sacp.test" />
-    <profile name="sbt 2" modules="earthquake-application.main,earthquake-application.test">
-      <option name="deprecationWarnings" value="true" />
-      <option name="uncheckedWarnings" value="true" />
-      <option name="featureWarnings" value="true" />
-      <parameters>
-        <parameter value="-Xlint" />
-        <parameter value="-encoding" />
-        <parameter value="UTF-8" />
-        <parameter value="-release" />
-        <parameter value="17" />
-      </parameters>
-    </profile>
     <profile name="sbt 3" modules="earthquake-cooccurrence.main,earthquake-cooccurrence.test">
       <option name="deprecationWarnings" value="true" />
       <option name="uncheckedWarnings" value="true" />
@@ -24,6 +12,18 @@
         <parameter value="-encoding" />
         <parameter value="UTF-8" />
         <parameter value="-target:jvm-1.8" />
+      </parameters>
+    </profile>
+    <profile name="sbt 4" modules="earthquake-application.main,earthquake-application.test">
+      <option name="deprecationWarnings" value="true" />
+      <option name="uncheckedWarnings" value="true" />
+      <option name="featureWarnings" value="true" />
+      <parameters>
+        <parameter value="-Xlint" />
+        <parameter value="-encoding" />
+        <parameter value="UTF-8" />
+        <parameter value="-release" />
+        <parameter value="11" />
       </parameters>
     </profile>
   </component>

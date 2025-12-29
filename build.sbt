@@ -3,7 +3,7 @@ name := "earthquake-application"
 version := "2.0"
 
 
-scalaVersion := "2.13.12"
+scalaVersion := "2.12.18"
 
 
 libraryDependencies ++= Seq(
@@ -25,8 +25,8 @@ assembly / assemblyMergeStrategy := {
 
 
 assembly / assemblyOption := (assembly / assemblyOption).value
-  .withIncludeScala(false)
-  .withIncludeDependency(false)
+  .withIncludeScala(true)
+  .withIncludeDependency(true)
 
 // Main class
 Compile / mainClass := Some("Main")
