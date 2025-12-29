@@ -2,8 +2,8 @@ name := "earthquake-cooccurrence"
 
 version := "2.0"
 
-// Spark 4.x richiede Scala 2.13 (NO Scala 3)
-scalaVersion := "2.13.12"
+
+scalaVersion := "2.12.18"
 
 // Dipendenze Spark (allineate a Spark 4.0.1)
 libraryDependencies ++= Seq(
@@ -27,8 +27,8 @@ assembly / assemblyMergeStrategy := {
 // NON includere scala-library né dipendenze Spark nel fat JAR
 // Spark fornisce già tutto a runtime
 assembly / assemblyOption := (assembly / assemblyOption).value
-  .withIncludeScala(false)
-  .withIncludeDependency(false)
+  .withIncludeScala(true)
+  .withIncludeDependency(true)
 
 // Main class
 Compile / mainClass := Some("Main")
