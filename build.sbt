@@ -1,14 +1,14 @@
 name := "earthquake-application"
 
-version := "1.0"
+version := "2.0"
 
 
 scalaVersion := "2.13.12"
 
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "4.0.1" % "provided",
-  "org.apache.spark" %% "spark-sql"  % "4.0.1" % "provided",
+  "org.apache.spark" %% "spark-core" % "3.3.0" % "provided",
+  "org.apache.spark" %% "spark-sql"  % "3.3.0" % "provided",
   "log4j" % "log4j" % "1.2.17"
 )
 
@@ -41,13 +41,13 @@ scalacOptions ++= Seq(
   "-unchecked",
   "-Xlint",
   "-encoding", "UTF-8",
-  "-release", "17"
+  "-release", "11"
 )
 
 
 
 javacOptions ++= Seq(
-  "--release", "17",
+  "--release", "11",
   "-encoding", "UTF-8"
 )
 
