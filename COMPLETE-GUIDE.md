@@ -23,21 +23,21 @@
 ### Software Necessario
 
 ```bash
-# Verifica Java (richiesto: 17+)
+# Verifica Java (richiesto: 11+)
 java -version
-# Output atteso: java version "17" o superiore
+# Output atteso: java version "11"
 
-# Verifica Scala (richiesto: 2.13.x)
+# Verifica Scala (richiesto: 2.12.x)
 scala -version
-# Output atteso: Scala code runner version 2.13.x
+# Output atteso: Scala code runner version 2.12.x
 
 # Verifica SBT
 sbt --version
 # Output atteso: sbt version 1.x.x
 
-# Verifica Spark (richiesto: 4.x per test locali)
+# Verifica Spark (richiesto: 3.x per test locali)
 spark-submit --version
-# Output atteso: version 4.0.x o compatibile
+# Output atteso: version 3.0.x o compatibile
 ```
 
 ### Google Cloud SDK (per esecuzione cloud)
