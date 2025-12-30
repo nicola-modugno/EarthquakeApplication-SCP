@@ -342,7 +342,7 @@ co_occurrences,load_time_ms,analysis_time_ms,total_time_ms,max_count,timestamp
 
 ```bash
 # 1. Crea bucket
-BUCKET_NAME="earthquake-YOUR_MATRICOLA"
+BUCKET_NAME="bucket_scp_1"
 gsutil mb gs://$BUCKET_NAME/
 
 # 2. Upload JAR
@@ -472,19 +472,33 @@ JAR="gs://$BUCKET/jars/earthquake-application.jar"
 DATA="gs://$BUCKET/data/$DATASET"
 REGION="europe-west1"
 
-# Configurazioni ridotte per quota CPU
+# Array configurazioni
 declare -a CONFIGS=(
   "2:8:groupbykey:hash"
   "2:8:aggregatebykey:hash"
   "2:8:reducebykey:hash"
+  "2:8:groupbykey:range"
   "2:8:aggregatebykey:range"
+  "2:8:reducebykey:range"
+  "3:12:groupbykey:hash"
+  "3:12:aggregatebykey:hash"
+  "3:12:reducebykey:hash"
+  "3:12:groupbykey:range"
+  "3:12:aggregatebykey:range"
+  "3:12:reducebykey:range"
+  "4:16:groupbykey:hash"
+  "4:16:aggregatebykey:hash"
+  "4:16:reducebykey:hash"
+  "4:16:groupbykey:range"
+  "4:16:aggregatebykey:range"
+  "4:16:reducebykey:range"
 )
 
 for config in "${CONFIGS[@]}"; do
   IFS=':' read -r workers partitions approach partitioner <<< "$config"
   
   cluster="earthquake-cluster-${workers}w"
-  output="gs://$BUCKET/output/${workers}w-${approach}-${partitioner}"
+  output="gs://$BUCKET/output/${workers}w-${approach}-${partitioner}-4cpus"
   
   echo "=============================================="
   echo "Config: $workers workers, $approach, $partitioner"
@@ -494,14 +508,13 @@ for config in "${CONFIGS[@]}"; do
   if ! gcloud dataproc clusters describe $cluster --region=$REGION &>/dev/null; then
     echo "Creating cluster $cluster..."
     gcloud dataproc clusters create $cluster \
-      --region=$REGION \
-      --image-version=2.2-debian12 \
-      --num-workers $workers \
-      --master-boot-disk-size 240 \
-      --worker-boot-disk-size 240 \
-      --master-machine-type=n2-standard-2 \
-      --worker-machine-type=n2-standard-2 \
-      --quiet
+        --region=$REGION \
+  	--num-workers $workers \
+  	--master-boot-disk-size 240 \
+  	--worker-boot-disk-size 240 \
+  	--master-machine-type=n2-standard-4 \
+	--worker-machine-type=n2-standard-4 \
+  	--quiet
   fi
   
   # Submit job
@@ -512,23 +525,25 @@ for config in "${CONFIGS[@]}"; do
     --jar=$JAR \
     -- $DATA $output $partitions $approach $partitioner $workers
   
-  # Download metriche (usa python3 invece di python3.12)
-  if command -v python3 &> /dev/null; then
-    gsutil cp ${output}/metrics/part-* metrics-${workers}w-${approach}-${partitioner}.csv 2>/dev/null || true
-  fi
+  # Download metriche
+  gcloud storage cp -r gs://$BUCKET/output ./cloud-results
+
   
   echo "Done!"
   echo ""
 done
 
-# Elimina cluster
-cluster="earthquake-cluster-2w"
-if gcloud dataproc clusters describe $cluster --region=$REGION &>/dev/null; then
-  echo "Deleting cluster $cluster..."
-  gcloud dataproc clusters delete $cluster --region=$REGION --quiet
-fi
+# Elimina tutti i cluster
+for workers in 2 3 4; do
+  cluster="earthquake-cluster-${workers}w"
+  if gcloud dataproc clusters describe $cluster --region=$REGION &>/dev/null; then
+    echo "Deleting cluster $cluster..."
+    gcloud dataproc clusters delete $cluster --region=$REGION --quiet
+  fi
+done
 
 echo "All experiments completed!"
+
 ```
 
 Esegui:
