@@ -348,7 +348,7 @@ co_occurrences,load_time_ms,analysis_time_ms,total_time_ms,max_count,timestamp
 
 ```bash
 # 1. Crea bucket
-BUCKET_NAME="earthquake-YOUR_MATRICOLA"
+BUCKET_NAME="bucket_scp_1"
 gsutil mb gs://$BUCKET_NAME/
 
 # 2. Upload JAR
@@ -468,51 +468,84 @@ JAR="gs://$BUCKET/jars/earthquake-application.jar"
 DATA="gs://$BUCKET/data/$DATASET"
 REGION="europe-west1"
 
-Lo script farà TUTTO automaticamente:
-1. ✅ Crea cluster 2 workers → esegue 6 esperimenti → elimina cluster
-2. ✅ Crea cluster 3 workers → esegue 6 esperimenti → elimina cluster
-3. ✅ Crea cluster 4 workers → esegue 6 esperimenti → elimina cluster
-4. ✅ Genera CSV finale con TUTTE le metriche
-5. ✅ Genera report con calcoli automatici
+# Array configurazioni
+declare -a CONFIGS=(
+  "2:8:groupbykey:hash"
+  "2:8:aggregatebykey:hash"
+  "2:8:reducebykey:hash"
+  "2:8:groupbykey:range"
+  "2:8:aggregatebykey:range"
+  "2:8:reducebykey:range"
+  "3:12:groupbykey:hash"
+  "3:12:aggregatebykey:hash"
+  "3:12:reducebykey:hash"
+  "3:12:groupbykey:range"
+  "3:12:aggregatebykey:range"
+  "3:12:reducebykey:range"
+  "4:16:groupbykey:hash"
+  "4:16:aggregatebykey:hash"
+  "4:16:reducebykey:hash"
+  "4:16:groupbykey:range"
+  "4:16:aggregatebykey:range"
+  "4:16:reducebykey:range"
+)
 
-### Opzione B: Manuale (Un Esperimento alla Volta)
+for config in "${CONFIGS[@]}"; do
+  IFS=':' read -r workers partitions approach partitioner <<< "$config"
+  
+  cluster="earthquake-cluster-${workers}w"
+  output="gs://$BUCKET/output/${workers}w-${approach}-${partitioner}-4cpus"
+  
+  echo "=============================================="
+  echo "Config: $workers workers, $approach, $partitioner"
+  echo "=============================================="
+  
+  # Crea cluster se non esiste
+  if ! gcloud dataproc clusters describe $cluster --region=$REGION &>/dev/null; then
+    echo "Creating cluster $cluster..."
+    gcloud dataproc clusters create $cluster \
+        --region=$REGION \
+  	--num-workers $workers \
+  	--master-boot-disk-size 240 \
+  	--worker-boot-disk-size 240 \
+  	--master-machine-type=n2-standard-4 \
+	--worker-machine-type=n2-standard-4 \
+  	--quiet
+  fi
+  
+  # Submit job
+  echo "Submitting job..."
+  gcloud dataproc jobs submit spark \
+    --cluster=$cluster \
+    --region=$REGION \
+    --jar=$JAR \
+    -- $DATA $output $partitions $approach $partitioner $workers
+  
+  # Download metriche
+  gcloud storage cp -r gs://$BUCKET/output ./cloud-results
 
-Se preferisci controllare ogni step:
-
-```bash
-# 1. Crea cluster
-gcloud dataproc clusters create earthquake-cluster-2w \
-  --region=europe-west1 \
-  --num-workers 2 \
-  --master-boot-disk-size 240 \
-  --worker-boot-disk-size 240 \
-  --master-machine-type=n2-standard-4 \
-  --worker-machine-type=n2-standard-4
-
-# 2. Esegui esperimenti (cambia approach e partitioner)
-for approach in groupbykey aggregatebykey reducebykey; do
-  for part in hash range; do
-    gcloud dataproc jobs submit spark \
-      --cluster=earthquake-cluster-2w \
-      --region=europe-west1 \
-      --jar=gs://YOUR_BUCKET/jars/earthquake-cooccurrence-assembly-1.0.jar \
-      -- gs://YOUR_BUCKET/data/earthquakes-full.csv \
-         gs://YOUR_BUCKET/output/2w-${approach}-${part} \
-         8 \
-         $approach \
-         $part \
-         2
-    
-    # Scarica metriche
-    gsutil cp gs://YOUR_BUCKET/output/2w-${approach}-${part}/metrics/part-* \
-      metrics-2w-${approach}-${part}.csv
-  done
+  
+  echo "Done!"
+  echo ""
 done
 
-# 3. Elimina cluster
-gcloud dataproc clusters delete earthquake-cluster-2w --region=europe-west1
+# Elimina tutti i cluster
+for workers in 2 3 4; do
+  cluster="earthquake-cluster-${workers}w"
+  if gcloud dataproc clusters describe $cluster --region=$REGION &>/dev/null; then
+    echo "Deleting cluster $cluster..."
+    gcloud dataproc clusters delete $cluster --region=$REGION --quiet
+  fi
+done
 
-# 4. Ripeti per 3 e 4 workers
+echo "All experiments completed!"
+
+```
+
+Esegui:
+```bash
+chmod +x run-all-experiments.sh
+./run-all-experiments.sh
 ```
 
 ---
