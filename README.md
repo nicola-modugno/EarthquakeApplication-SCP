@@ -199,9 +199,9 @@ gcloud dataproc clusters delete earthquake-cluster --region=europe-west1
 
 ## 🔧 Requisiti
 
-- **Java**: 17 o superiore
-- **Scala**: 2.13.x
-- **Spark**: 4.0.x
+- **Java**: 11
+- **Scala**: 2.12.x
+- **Spark**: 3.0.x
 - **Google Cloud SDK** (per esecuzione cloud)
 
 ---
