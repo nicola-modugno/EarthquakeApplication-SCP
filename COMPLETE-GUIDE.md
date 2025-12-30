@@ -26,11 +26,21 @@
 ### Software Necessario
 
 ```bash
-# Per verificare di avere tutto installato
-java -version     # Deve essere 17 o superiore
-scala -version    # Deve essere 2.13.x
-sbt --version     # Qualsiasi versione recente
-spark-submit --version  # Deve essere 4.x
+# Verifica Java (richiesto: 11+)
+java -version
+# Output atteso: java version "11"
+
+# Verifica Scala (richiesto: 2.12.x)
+scala -version
+# Output atteso: Scala code runner version 2.12.x
+
+# Verifica SBT
+sbt --version
+# Output atteso: sbt version 1.x.x
+
+# Verifica Spark (richiesto: 3.x per test locali)
+spark-submit --version
+# Output atteso: version 3.0.x o compatibile
 ```
 
 ### Step 1: Compila il Progetto
