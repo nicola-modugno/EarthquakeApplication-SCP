@@ -11,7 +11,7 @@ Il progetto implementa un'analisi distribuita su dataset di terremoti per trovar
 - **Finestra temporale**: Co-occorrenza basata su giorni (yyyy-MM-dd)
 - **Rimozione dei duplicati**: Eventi nella stessa cella geografica e data trattati come unici
 - **Tre approcci diversi**: GroupByKey, AggregateByKey, ReduceByKey
-- **Partizionamento Hash**: Uso esplicito di `repartition()` per controllo parallelismo
+- **Partizionamento Hash**: con  `repartition()` per controllo parallelismo
 - **Scalabilità**: Testabile su cluster 2, 3, 4 worker nodes
 
 ## 🔬 Tre Approcci Implementati
