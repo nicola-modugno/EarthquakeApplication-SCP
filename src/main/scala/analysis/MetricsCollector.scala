@@ -5,7 +5,7 @@ import utils.Utils
 
 object MetricsCollector {
 
-  val CSV_HEADER: String = "approach,partitioner,num_workers,num_partitions,total_events,unique_events," +
+  val CSV_HEADER: String = "approach,num_workers,num_partitions,total_events,unique_events," +
     "co_occurrences,load_time_ms,analysis_time_ms,total_time_ms,max_count,timestamp"
 
   /**
@@ -44,5 +44,4 @@ object MetricsCollector {
     val rdd = sc.parallelize(Seq(metrics.toReadableString))
     rdd.coalesce(1).saveAsTextFile(readablePath)
   }
-
 }

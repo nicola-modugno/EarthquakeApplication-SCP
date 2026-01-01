@@ -1,15 +1,7 @@
 package analysis
 
-import org.apache.spark.{HashPartitioner, Partitioner, RangePartitioner}
 import org.apache.spark.rdd.RDD
 import utils.Utils
-
-/**
- * Tipo di partitioner da utilizzare.
- */
-trait PartitionerType
-case object HashPartitionerType extends PartitionerType
-case object RangePartitionerType extends PartitionerType
 
 object CoOccurrenceAnalysis {
 
@@ -25,48 +17,27 @@ object CoOccurrenceAnalysis {
    * @param events RDD di eventi sismici
    * @param numPartitions Numero di partizioni per ottimizzare il parallelismo
    * @param approach Approccio da utilizzare per l'analisi
-   * @param partitionerType Tipo di partitioner (Hash o Range)
    * @return AnalysisResult con coppia, date e metriche
    */
   def findMaxCoOccurrence(
                            events: RDD[EarthquakeEvent],
                            numPartitions: Int,
-                           approach: AnalysisApproach = GroupByKeyApproach,
-                           partitionerType: PartitionerType = HashPartitionerType
+                           approach: AnalysisApproach = GroupByKeyApproach
                          ): AnalysisResult = {
 
     println(s"\n=== Using approach: ${approachName(approach)} ===")
-    println(s"=== Using partitioner: ${partitionerName(partitionerType)} ===\n")
+    println(s"=== Using $numPartitions partitions ===\n")
 
-    (approach, partitionerType) match {
-      case (GroupByKeyApproach, pt) =>
-        findMaxCoOccurrenceGroupByKey(events, numPartitions, pt)
-      case (AggregateByKeyApproach, pt) =>
-        findMaxCoOccurrenceAggregateByKey(events, numPartitions, pt)
-      case (ReduceByKeyApproach, pt) =>
-        findMaxCoOccurrenceReduceByKey(events, numPartitions, pt)
+    approach match {
+      case GroupByKeyApproach =>
+        findMaxCoOccurrenceGroupByKey(events, numPartitions)
+      case AggregateByKeyApproach =>
+        findMaxCoOccurrenceAggregateByKey(events, numPartitions)
+      case ReduceByKeyApproach =>
+        findMaxCoOccurrenceReduceByKey(events, numPartitions)
       case _ =>
         println(s"Warning: Unknown approach, falling back to GroupByKey")
-        findMaxCoOccurrenceGroupByKey(events, numPartitions, partitionerType)
-    }
-  }
-
-  /**
-   * Crea un partitioner in base al tipo richiesto.
-   */
-  private def createPartitioner(
-                                 rdd: RDD[(Location, String)],
-                                 numPartitions: Int,
-                                 partitionerType: PartitionerType
-                               ): Partitioner = {
-    partitionerType match {
-      case HashPartitionerType =>
-        new HashPartitioner(numPartitions)
-      case RangePartitionerType =>
-        new RangePartitioner(numPartitions, rdd)
-      case _ =>
-        println("Warning: Unknown partitioner type, using Hash")
-        new HashPartitioner(numPartitions)
+        findMaxCoOccurrenceGroupByKey(events, numPartitions)
     }
   }
 
@@ -75,8 +46,7 @@ object CoOccurrenceAnalysis {
    */
   private def findMaxCoOccurrenceGroupByKey(
                                              events: RDD[EarthquakeEvent],
-                                             numPartitions: Int,
-                                             partitionerType: PartitionerType
+                                             numPartitions: Int
                                            ): AnalysisResult = {
 
     println("Step 1: Normalizzazione coordinate...")
@@ -96,17 +66,16 @@ object CoOccurrenceAnalysis {
       .map { case (lat, lon, date) => (Location(lat, lon), date) }
       .distinct()
 
-    // Crea partitioner appropriato
-    val partitioner = createPartitioner(uniqueEvents, numPartitions, partitionerType)
-    val partitionedEvents = uniqueEvents.partitionBy(partitioner).persist()
-
-    val uniqueCount = partitionedEvents.count()
+    val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
+    // ✅ Repartitioning esplicito come richiesto dal progetto
+    println(s"Step 2.1: Repartitioning data to $numPartitions partitions using repartition()...")
+    val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
+
     println("Step 3: Raggruppamento per data (groupByKey)...")
-    val eventsByDate = partitionedEvents
+    val eventsByDate = repartitionedEvents
       .map { case (location, date) => (date, location) }
-      .partitionBy(partitioner)
 
     val locationsByDate = eventsByDate.groupByKey()
 
@@ -138,8 +107,7 @@ object CoOccurrenceAnalysis {
    */
   private def findMaxCoOccurrenceAggregateByKey(
                                                  events: RDD[EarthquakeEvent],
-                                                 numPartitions: Int,
-                                                 partitionerType: PartitionerType
+                                                 numPartitions: Int
                                                ): AnalysisResult = {
 
     println("Step 1: Normalizzazione coordinate...")
@@ -159,16 +127,16 @@ object CoOccurrenceAnalysis {
       .map { case (lat, lon, date) => (Location(lat, lon), date) }
       .distinct()
 
-    val partitioner = createPartitioner(uniqueEvents, numPartitions, partitionerType)
-    val partitionedEvents = uniqueEvents.partitionBy(partitioner).persist()
-
-    val uniqueCount = partitionedEvents.count()
+    val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
+    // ✅ Repartitioning esplicito
+    println(s"Step 2.1: Repartitioning data to $numPartitions partitions using repartition()...")
+    val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
+
     println("Step 3: Aggregazione per data (aggregateByKey)...")
-    val eventsByDate = partitionedEvents
+    val eventsByDate = repartitionedEvents
       .map { case (location, date) => (date, location) }
-      .partitionBy(partitioner)
 
     val locationsByDate = eventsByDate
       .aggregateByKey(Set.empty[Location])(
@@ -204,8 +172,7 @@ object CoOccurrenceAnalysis {
    */
   private def findMaxCoOccurrenceReduceByKey(
                                               events: RDD[EarthquakeEvent],
-                                              numPartitions: Int,
-                                              partitionerType: PartitionerType
+                                              numPartitions: Int
                                             ): AnalysisResult = {
 
     println("Step 1: Normalizzazione coordinate...")
@@ -228,16 +195,16 @@ object CoOccurrenceAnalysis {
       .reduceByKey(_ + _)
       .map { case ((location, date), _) => (location, date) }
 
-    val partitioner = createPartitioner(uniqueEvents, numPartitions, partitionerType)
-    val partitionedEvents = uniqueEvents.partitionBy(partitioner).persist()
-
-    val uniqueCount = partitionedEvents.count()
+    val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
+    // ✅ Repartitioning esplicito
+    println(s"Step 2.1: Repartitioning data to $numPartitions partitions using repartition()...")
+    val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
+
     println("Step 3: Aggregazione località per data...")
-    val eventsByDate = partitionedEvents
+    val eventsByDate = repartitionedEvents
       .map { case (location, date) => (date, location) }
-      .partitionBy(partitioner)
 
     val locationsByDate = eventsByDate
       .aggregateByKey(Set.empty[Location])(
@@ -336,29 +303,10 @@ object CoOccurrenceAnalysis {
     }
   }
 
-  /**
-   * Parse string to partitioner type.
-   */
-  def parsePartitioner(str: String): PartitionerType = {
-    str.toLowerCase match {
-      case "hash" | "hashpartitioner" => HashPartitionerType
-      case "range" | "rangepartitioner" => RangePartitionerType
-      case _ =>
-        println(s"Unknown partitioner '$str', using default (Hash)")
-        HashPartitionerType
-    }
-  }
-
   def approachName(approach: AnalysisApproach): String = approach match {
     case GroupByKeyApproach => "GroupByKey"
     case AggregateByKeyApproach => "AggregateByKey"
     case ReduceByKeyApproach => "ReduceByKey"
-    case _ => "Unknown"
-  }
-
-  def partitionerName(partitioner: PartitionerType): String = partitioner match {
-    case HashPartitionerType => "Hash"
-    case RangePartitionerType => "Range"
     case _ => "Unknown"
   }
 }
