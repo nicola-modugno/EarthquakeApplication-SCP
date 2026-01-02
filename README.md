@@ -117,14 +117,6 @@ Per ogni esecuzione vengono generati:
 2. **`output/metrics/part-*`** - Metriche in formato CSV
 3. **`output/metrics-readable/part-*`** - Metriche in formato leggibile
 
-### Uso delle Metriche
-
-Le metriche CSV possono essere:
-- Importate in Excel/Google Sheets
-- Usate per calcolare Speedup ed Efficiency
-- Aggregate per generare grafici
-- Analizzate per il report del progetto
-
 ## 📝 Formato Output
 
 ```
@@ -151,6 +143,8 @@ gsutil cp earthquakes-full.csv gs://YOUR_BUCKET/data/
 ```
 
 ### Crea Cluster
+
+**Configurazione obbligatoria (n2-standard-4):**
 
 ```bash
 gcloud dataproc clusters create earthquake-cluster \
@@ -194,18 +188,83 @@ gcloud dataproc clusters delete earthquake-cluster --region=europe-west1
 - Analisi risultati
 - Troubleshooting
 
-### API Doc
-- **Codice**: Documentazione Scaladoc in [target/scala-2.13/api/index.html](target/scala-2.13/api/index.html)
+```bash
+# Test su cluster 2 workers con diverse partizioni
+for PARTITIONS in 8 16 32 48; do
+  for APPROACH in groupbykey aggregatebykey reducebykey; do
+    gcloud dataproc jobs submit spark \
+      --cluster=earthquake-cluster-2w \
+      --region=$REGION \
+      --jar=gs://$BUCKET/jars/earthquake-application.jar \
+      -- gs://$BUCKET/data/dataset-earthquakes-full.csv \
+         gs://$BUCKET/output/2w-${PARTITIONS}p-${APPROACH} \
+         $PARTITIONS \
+         $APPROACH \
+         2
+  done
+done
+```
 
 ## 🔧 Requisiti
 
 - **Java**: 11
 - **Scala**: 2.12.x
-- **Spark**: 3.0.x
-- **Google Cloud SDK** (per esecuzione cloud)
+- **SBT**: 1.5.x o superiore
+- **Apache Spark**: 3.5.x
+- **Google Cloud SDK**: Latest (per esecuzione cloud)
+
+### Quota Google Cloud
+
+Per testare tutte le configurazioni (2, 3, 4 workers con n2-standard-4):
+- **Quota minima**: 12 vCPU (solo 2 workers)
+- **Quota raccomandata**: 24 vCPU (tutte le configurazioni)
+
+## 🐛 Troubleshooting
+
+### OutOfMemoryError
+
+```
+Soluzione: Ridurre executor memory o aumentare partizioni
+--conf spark.executor.memory=8g
+--conf spark.executor.memoryOverhead=2g
+```
+
+### Job troppo lento
+
+```
+Causa: Numero partizioni subottimale
+Soluzione: Testare 2-4× numero vCPU cluster
+```
+
+### Quota vCPU insufficiente
+
+```
+Errore: CPUS_ALL_REGIONS quota exceeded
+Soluzione: Richiedere aumento quota
+```
+
+### Cluster creation timeout
+
+```
+Causa: Region sovraccarica o quota esaurita
+Soluzione: Cambiare region o attendere
+```
+
+## 📚 Documentazione Aggiuntiva
+
+### File di Progetto
+
+- **[COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)**: Guida completa setup e testing
+- **[RELAZIONE.pdf](Report.pdf)**: Relazione del progetto
+- **Scaladoc**: Generata in `target/scala-2.12/api/index.html` dopo compilazione
+
+## 📄 Licenza
+
+Progetto didattico per corso universitario.
 
 ---
 
 **Autore**: Nicola Modugno  
 **Corso**: Scalable and Cloud Programming  
-**A.A.**: 2025-26
+**A.A.**: 2024-25  
+**Università**: [Università di Bologna]
