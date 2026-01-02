@@ -132,23 +132,6 @@ Per ogni esecuzione vengono generati:
 2. **`output/metrics/part-*`** - Metriche in formato CSV
 3. **`output/metrics-readable/part-*`** - Metriche in formato leggibile
 
-### Uso delle Metriche
-
-Le metriche CSV possono essere:
-- Importate in Excel/Google Sheets per analisi
-- Usate per calcolare Speedup ed Efficiency
-- Aggregate per generare grafici comparativi
-- Analizzate per identificare configurazioni ottimali
-- Incluse nel report del progetto
-
-**Esempio analisi:**
-```python
-import pandas as pd
-df = pd.read_csv('metrics.csv')
-df['analysis_time_sec'] = df['analysis_time_ms'] / 1000
-df.groupby(['approach', 'num_partitions'])['analysis_time_sec'].mean()
-```
-
 ## 📝 Formato Output
 
 ```
@@ -185,7 +168,7 @@ gcloud storage cp dataset-earthquakes-full.csv \
 
 ### Crea Cluster
 
-**Configurazione raccomandata (n2-standard-4):**
+**Configurazione obbligatoria (n2-standard-4):**
 
 ```bash
 # Cluster 2 workers (12 vCPU totali)
@@ -260,51 +243,6 @@ for PARTITIONS in 8 16 32 48; do
 done
 ```
 
-### Configurazioni Raccomandate
-
-**Regola empirica: 2-4× il numero di vCPU disponibili**
-
-| Cluster | vCPU | Partizioni Raccomandate |
-|---------|------|------------------------|
-| 2 workers | 12 | 16, 24, 32, 48 |
-| 3 workers | 16 | 24, 32, 48, 64 |
-| 4 workers | 20 | 32, 48, 64, 80 |
-
-**Nota:** La zona ottimale tipicamente è 2-4× vCPU. Oltre 6× si osserva overhead di scheduling.
-
-## 📊 Analisi Risultati
-
-### Confronto Approcci
-
-I tre approcci hanno caratteristiche diverse:
-
-| Approccio | Shuffling | Memoria | Performance Attesa |
-|-----------|-----------|---------|-------------------|
-| **GroupByKey** | Alto | Alta | Baseline (100%) |
-| **AggregateByKey** | Medio | Media | ~40-50% più veloce |
-| **ReduceByKey** | Basso | Bassa | ~50-60% più veloce |
-
-### Impatto Partizionamento
-
-**Sottopartizionamento (partitions < 2× vCPU):**
-- CPU sottoutilizzata
-- Performance: -10-15%
-
-**Ottimale (partitions = 2-4× vCPU):**
-- Bilanciamento ideale
-- Performance: massima
-
-**Sovrapartizionamento (partitions > 6× vCPU):**
-- Overhead scheduling
-- Performance: -5-10%
-
-### Grafici Consigliati per Report
-
-1. **Impatto Partizioni**: Tempo vs Numero Partizioni (per approccio)
-2. **Confronto Approcci**: Tempo vs Approccio (per configurazione workers)
-3. **Scalabilità**: Speedup vs Numero Workers
-4. **Zona Ottimale**: Performance vs Partitions/vCPU Ratio
-
 ## 🔧 Requisiti
 
 ### Software
@@ -319,17 +257,6 @@ I tre approcci hanno caratteristiche diverse:
 Per testare tutte le configurazioni (2, 3, 4 workers con n2-standard-4):
 - **Quota minima**: 12 vCPU (solo 2 workers)
 - **Quota raccomandata**: 24 vCPU (tutte le configurazioni)
-
-Richiedi aumento quota su: https://console.cloud.google.com/iam-admin/quotas
-
-### Dataset
-
-Il dataset deve contenere almeno queste colonne CSV:
-- `time`: timestamp in formato ISO8601 (yyyy-MM-dd'T'HH:mm:ss.SSSZ)
-- `latitude`: latitudine decimale
-- `longitude`: longitudine decimale
-
-Altre colonne (magnitude, depth, etc.) vengono ignorate.
 
 ## 🐛 Troubleshooting
 
@@ -352,7 +279,7 @@ Soluzione: Testare 2-4× numero vCPU cluster
 
 ```
 Errore: CPUS_ALL_REGIONS quota exceeded
-Soluzione: Richiedere aumento quota o ridurre workers/machine-type
+Soluzione: Richiedere aumento quota
 ```
 
 ### Cluster creation timeout
@@ -367,44 +294,8 @@ Soluzione: Cambiare region o attendere
 ### File di Progetto
 
 - **[COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)**: Guida completa setup e testing
-- **[DEPLOYMENT_FINALE_COMPLETO.md](DEPLOYMENT_FINALE_COMPLETO.md)**: Istruzioni deployment cloud
+- **[RELAZIONE.pdf](Report.pdf)**: Relazione del progetto
 - **Scaladoc**: Generata in `target/scala-2.12/api/index.html` dopo compilazione
-
-### Risorse Esterne
-
-- [Apache Spark Documentation](https://spark.apache.org/docs/latest/)
-- [Google Cloud Dataproc](https://cloud.google.com/dataproc/docs)
-- [Scala Documentation](https://docs.scala-lang.org/)
-
-## 📈 Performance Attese
-
-Con dataset ~3.4M eventi, cluster 2 workers (n2-standard-4, 16 partizioni):
-
-| Approccio | Tempo Atteso | Memoria Peak |
-|-----------|--------------|--------------|
-| GroupByKey | ~13-15 min | ~12GB |
-| AggregateByKey | ~7-9 min | ~8GB |
-| ReduceByKey | ~6-8 min | ~6GB |
-
-**Nota:** Tempi variano in base a configurazione cluster e carico GCP.
-
-## 🎓 Considerazioni Didattiche
-
-### Obiettivi di Apprendimento
-
-Questo progetto dimostra:
-- Uso di RDD transformations (map, filter, flatMap, groupByKey, reduceByKey, aggregateByKey)
-- Gestione partizionamento con `repartition()`
-- Confronto performance diversi approcci Spark
-- Deploy e gestione cluster cloud
-- Analisi scalabilità distribuita
-- Raccolta e interpretazione metriche
-
-### Limitazioni Conosciute
-
-- Hash partitioning può creare sbilanciamento con dati skewed
-- GroupByKey non ottimale per dataset molto grandi (>100M eventi)
-- Free tier GCP limita testing a configurazioni piccole/medie
 
 ## 📄 Licenza
 
@@ -415,4 +306,4 @@ Progetto didattico per corso universitario.
 **Autore**: Nicola Modugno  
 **Corso**: Scalable and Cloud Programming  
 **A.A.**: 2024-25  
-**Università**: [Nome Università]
+**Università**: [Università di Bologna]
