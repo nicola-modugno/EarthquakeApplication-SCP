@@ -222,7 +222,7 @@ gcloud dataproc clusters delete earthquake-cluster-2w --region=$REGION --quiet
 
 ## 🧪 Testing su Configurazioni Multiple
 
-### Script Automatizzato
+### Script Bash Automatizzato
 
 Per testare multiple configurazioni di partizioni e approcci:
 
@@ -296,10 +296,6 @@ Soluzione: Cambiare region o attendere
 - **[COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)**: Guida completa setup e testing
 - **[RELAZIONE.pdf](Report.pdf)**: Relazione del progetto
 - **Scaladoc**: Generata in `target/scala-2.12/api/index.html` dopo compilazione
-
-## 📄 Licenza
-
-Progetto didattico per corso universitario.
 
 ---
 
