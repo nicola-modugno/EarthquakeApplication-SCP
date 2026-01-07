@@ -230,6 +230,243 @@ gcloud dataproc jobs submit spark \
      16 aggregatebykey 2
 ```
 
+## 3.1 Script bash per l'esecuzione di ogni espserimento
+```bash
+#!/bin/bash
+
+# Script per testare diverse configurazioni di partizioni
+
+BUCKET="bucket_scp_1"
+DATASET="dataset-earthquakes-full.csv"
+JAR="gs://$BUCKET/jars/earthquake-application.jar"
+DATA="gs://$BUCKET/data/$DATASET"
+REGION="europe-west1"
+
+# Funzione per creare cluster con n2-standard-4 per tutte le macchine
+create_cluster() {
+  local workers=$1
+  local cluster="earthquake-cluster-${workers}w"
+  
+  echo ""
+  echo "=========================================="
+  echo "Creating ${workers}-worker cluster..."
+  echo "All machines: n2-standard-4 (4 vCPU, 16GB RAM)"
+  
+  if [ $workers -eq 2 ]; then
+    echo "Total vCPU: 12 (master + 2 workers)"
+  elif [ $workers -eq 3 ]; then
+    echo "Total vCPU: 16 (master + 3 workers)"
+  elif [ $workers -eq 4 ]; then
+    echo "Total vCPU: 20 (master + 4 workers)"
+  fi
+  
+  echo "=========================================="
+  
+  gcloud dataproc clusters create $cluster \
+    --region=$REGION \
+    --image-version=2.1-debian11 \
+    --num-workers $workers \
+    --master-boot-disk-size 240 \
+    --worker-boot-disk-size 240 \
+    --master-machine-type=n2-standard-4 \
+    --worker-machine-type=n2-standard-4 \
+    --quiet
+  
+  return $?
+}
+
+# Funzione per eseguire job
+run_job() {
+  local workers=$1
+  local partitions=$2
+  local approach=$3
+  local cluster="earthquake-cluster-${workers}w"
+  local output="gs://$BUCKET/output/${workers}w-${partitions}p-${approach}"
+  
+  echo ""
+  echo "=============================================="
+  echo "Running: $workers workers, $partitions partitions, $approach"
+  echo "=============================================="
+  
+  gcloud dataproc jobs submit spark \
+    --cluster=$cluster \
+    --region=$REGION \
+    --jar=$JAR \
+    -- $DATA $output $partitions $approach $workers
+  
+  if [ $? -eq 0 ]; then
+    echo "✅ Job completed successfully!"
+    
+    # Scarica metriche
+    echo "Downloading metrics..."
+    gcloud storage cat "${output}/metrics/part-*" > "metrics-${workers}w-${partitions}p-${approach}.csv" 2>/dev/null
+    
+    if [ $? -eq 0 ]; then
+      echo "✅ Metrics saved: metrics-${workers}w-${partitions}p-${approach}.csv"
+    fi
+  else
+    echo "Errore! -  Job failed!"
+  fi
+}
+
+# Funzione per eliminare cluster
+delete_cluster() {
+  local workers=$1
+  local cluster="earthquake-cluster-${workers}w"
+  
+  echo ""
+  echo "=========================================="
+  echo "Deleting cluster $cluster..."
+  echo "=========================================="
+  
+  gcloud dataproc clusters delete $cluster --region=$REGION --quiet
+  echo "Waiting for resources to be released..."
+  sleep 30
+}
+
+
+# BANNER
+
+
+echo ""
+echo "************************************************"
+echo "TEST PARTIZIONAMENTO - CONFIGURAZIONI COMPLETE"
+echo "************************************************"
+echo ""
+echo "Configurazione hardware:"
+echo "  - Tipo macchina: n2-standard-4 (4 vCPU, 16GB RAM)"
+echo "  - Partitioner: Hash (via repartition)"
+echo "  - Configurazioni: 2, 3, 4 workers (come da requisiti)"
+echo ""
+echo "Test pianificati:"
+echo "  1. Cluster 2 workers (12 vCPU): 8, 16, 32, 48 partizioni"
+echo "  2. Cluster 3 workers (16 vCPU): 12, 24, 36 partizioni"
+echo "  3. Cluster 4 workers (20 vCPU): 16, 32, 48 partizioni"
+echo ""
+echo "Approcci testati:"
+echo "  - GroupByKey (tutte le configurazioni)"
+echo "  - AggregateByKey (partizioni ottimali)"
+echo "  - ReduceByKey (partizioni ottimali)"
+echo ""
+echo "Durata stimata: 3-4 ore"
+echo "Costo stimato: ~$1.50-2.00"
+echo ""
+read -p "Premere INVIO per continuare o Ctrl+C per annullare..."
+echo ""
+
+
+# TEST 2: 3 WORKERS - Variazioni partizioni
+
+
+echo ""
+echo "************************************************"
+echo "          3 WORKERS (16 vCPU)"
+echo "************************************************"
+
+create_cluster 3
+if [ $? -eq 0 ]; then
+  
+  # Test GroupByKey con diverse partizioni
+  echo ""
+  echo "--- GroupByKey Tests ---"
+  run_job 3 12 groupbykey
+  run_job 3 24 groupbykey
+  run_job 3 36 groupbykey
+  
+  # Test AggregateByKey (partizioni ottimali)
+  echo ""
+  echo "--- AggregateByKey Tests ---"
+  run_job 3 12 aggregatebykey
+  run_job 3 24 aggregatebykey
+  run_job 3 36 aggregatebykey
+  
+  # Test ReduceByKey (partizioni ottimali)
+  echo ""
+  echo "--- ReduceByKey Tests ---"
+  run_job 3 12 reducebykey
+  run_job 3 24 reducebykey
+  run_job 3 36 reducebykey
+  
+  delete_cluster 3
+else
+  echo "Errore! -  Failed to create 3-worker cluster!"
+  echo "Warning! -   Possibile problema quota vCPU. Verifica con:"
+  echo "    gcloud compute project-info describe --format='value(quotas)' | grep CPUS"
+  exit 1
+fi
+
+# TEST 3: 4 WORKERS - Variazioni partizioni
+
+echo ""
+echo "************************************************"
+echo "          4 WORKERS (20 vCPU)"
+echo "************************************************"
+
+create_cluster 4
+if [ $? -eq 0 ]; then
+  
+  # Test GroupByKey con diverse partizioni
+  echo ""
+  echo "--- GroupByKey Tests ---"
+  run_job 4 16 groupbykey
+  run_job 4 32 groupbykey
+  run_job 4 48 groupbykey
+  
+  # Test AggregateByKey (partizioni ottimali)
+  echo ""
+  echo "--- AggregateByKey Tests ---"
+  run_job 4 16 aggregatebykey
+  run_job 4 32 aggregatebykey
+  run_job 4 48 aggregatebykey
+  
+  # Test ReduceByKey (partizioni ottimali)
+  echo ""
+  echo "--- ReduceByKey Tests ---"
+  run_job 4 16 reducebykey
+  run_job 4 32 reducebykey
+  run_job 4 48 reducebykey
+  
+  delete_cluster 4
+else
+  echo "Errore! - Failed to create 4-worker cluster!"
+  echo "Warning! -  Possibile problema quota vCPU. Verifica con:"
+  echo "    gcloud compute project-info describe --format='value(quotas)' | grep CPUS"
+  exit 1
+fi
+
+# RIEPILOGO FINALE
+
+echo ""
+echo "************************************************"
+echo "      Esperimenti completati                   "
+echo "************************************************"
+echo ""
+echo "Metriche scaricate:"
+ls -lh metrics-*.csv 2>/dev/null | awk '{print "  - " $9 " (" $5 ")"}'
+echo ""
+echo "Totale test eseguiti:"
+echo "  - 2 workers: 8 test"
+echo "  - 3 workers: 5 test"
+echo "  - 4 workers: 5 test"
+echo "  TOTALE: 18 test"
+echo ""
+echo "FORMATO METRICHE CSV:"
+echo "approach,num_workers,num_partitions,total_events,unique_events,co_occurrences,load_time_ms,analysis_time_ms,total_time_ms,max_count,timestamp"
+echo ""
+echo "Prossimi passi:"
+echo "1. Unisci tutti i CSV: cat metrics-*.csv | grep -v '^approach' > all-metrics.csv"
+echo "2. Aggiungi header: echo 'approach,num_workers,num_partitions,...' | cat - all-metrics.csv > final-metrics.csv"
+echo "3. Analizza con Excel/Python/R"
+echo "4. Crea grafici per relazione"
+echo "5. Scrivi analisi risultati"
+echo ""
+echo "Grafici consigliati:"
+echo "  1. Impatto partizioni (per ogni approccio)"
+echo "  2. Confronto approcci (per ogni configurazione workers)"
+echo "  3. Scalabilità workers (per partizioni ottimali)"
+echo "  4. Zona ottimale partitions/vCPU ratio"
+
+```
 ### 4. Download Risultati
 
 ```bash
