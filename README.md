@@ -179,7 +179,7 @@ gcloud dataproc clusters delete earthquake-cluster --region=europe-west1
 
 ## 📚 Documentazione
 
-### Per Approfondire
+### Script Bash Automatizzato
 
 **Leggi la [COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)** per istruzioni passo-passo su:
 - Setup completo
@@ -257,10 +257,6 @@ Soluzione: Cambiare region o attendere
 - **[COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)**: Guida completa setup e testing
 - **[RELAZIONE.pdf](Report.pdf)**: Relazione del progetto
 - **Scaladoc**: Generata in `target/scala-2.12/api/index.html` dopo compilazione
-
-## 📄 Licenza
-
-Progetto didattico per corso universitario.
 
 ---
 
