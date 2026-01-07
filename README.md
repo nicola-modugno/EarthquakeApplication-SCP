@@ -177,34 +177,6 @@ gcloud dataproc jobs submit spark \
 gcloud dataproc clusters delete earthquake-cluster --region=europe-west1
 ```
 
-## 📚 Documentazione
-
-### Script Bash Automatizzato
-
-**Leggi la [COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)** per istruzioni passo-passo su:
-- Setup completo
-- Esempi per ogni approccio
-- Test locali e cloud
-- Analisi risultati
-- Troubleshooting
-
-```bash
-# Test su cluster 2 workers con diverse partizioni
-for PARTITIONS in 8 16 32 48; do
-  for APPROACH in groupbykey aggregatebykey reducebykey; do
-    gcloud dataproc jobs submit spark \
-      --cluster=earthquake-cluster-2w \
-      --region=$REGION \
-      --jar=gs://$BUCKET/jars/earthquake-application.jar \
-      -- gs://$BUCKET/data/dataset-earthquakes-full.csv \
-         gs://$BUCKET/output/2w-${PARTITIONS}p-${APPROACH} \
-         $PARTITIONS \
-         $APPROACH \
-         2
-  done
-done
-```
-
 ## 🔧 Requisiti
 
 - **Java**: 11
