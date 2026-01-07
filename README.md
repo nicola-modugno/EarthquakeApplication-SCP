@@ -220,29 +220,6 @@ gcloud storage cat gs://$BUCKET/output/2w-16p-groupbykey/metrics/part-* > metric
 gcloud dataproc clusters delete earthquake-cluster-2w --region=$REGION --quiet
 ```
 
-## 🧪 Testing su Configurazioni Multiple
-
-### Script Bash Automatizzato
-
-Per testare multiple configurazioni di partizioni e approcci:
-
-```bash
-# Test su cluster 2 workers con diverse partizioni
-for PARTITIONS in 8 16 32 48; do
-  for APPROACH in groupbykey aggregatebykey reducebykey; do
-    gcloud dataproc jobs submit spark \
-      --cluster=earthquake-cluster-2w \
-      --region=$REGION \
-      --jar=gs://$BUCKET/jars/earthquake-application.jar \
-      -- gs://$BUCKET/data/dataset-earthquakes-full.csv \
-         gs://$BUCKET/output/2w-${PARTITIONS}p-${APPROACH} \
-         $PARTITIONS \
-         $APPROACH \
-         2
-  done
-done
-```
-
 ## 🔧 Requisiti
 
 ### Software
