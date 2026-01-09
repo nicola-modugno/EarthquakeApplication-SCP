@@ -55,7 +55,7 @@ object Main {
         approach
       )
       val analysisTime = System.currentTimeMillis() - startAnalysis
-      println(s"✓ Analysis completed in ${analysisTime}ms (${analysisTime / 1000.0}s)")
+      println(s"SUCCESS! - Analysis completed in ${analysisTime}ms (${analysisTime / 1000.0}s)")
 
       // Salvataggio risultati
       println("\n[3/4] Saving results...")
@@ -64,11 +64,11 @@ object Main {
           val output = Utils.formatOutput(pair, result.dates)
           Utils.saveOutput(spark, output, outputFile)
 
-          println(s"✓ Results saved to: $outputFile")
+          println(s"Results saved to: $outputFile")
           printResultsSummary(pair, result)
 
         case None =>
-          println("⚠ No co-occurrences found")
+          println("No co-occurrences found")
       }
 
       // Salvataggio metriche
@@ -94,14 +94,14 @@ object Main {
       // Salva anche in formato leggibile
       MetricsCollector.saveMetricsReadable(spark, metrics, outputFile)
 
-      println(s"✓ Metrics saved to: $outputFile/metrics")
+      println(s"Metrics saved to: $outputFile/metrics")
 
       // Stampa performance summary
       printPerformanceSummary(loadTime, analysisTime, totalTime, approach)
 
     } catch {
       case e: Exception =>
-        println(s"\n✗ Error during execution: ${e.getMessage}")
+        println(s"\n Error during execution: ${e.getMessage}")
         e.printStackTrace()
         exitCode = 1
     } finally {
@@ -124,7 +124,7 @@ object Main {
       println("\nShutting down Spark gracefully...")
       spark.stop()
       Thread.sleep(500)
-      println("✓ Spark shutdown completed")
+      println("Spark shutdown completed")
     } catch {
       case _: Exception =>
     }
@@ -137,25 +137,25 @@ object Main {
                            approach: analysis.CoOccurrenceAnalysis.AnalysisApproach,
                            numWorkers: Int
                          ): Unit = {
-    println("=" * 70)
+    println("*" * 70)
     println("EARTHQUAKE CO-OCCURRENCE ANALYSIS")
-    println("=" * 70)
+    println("*" * 70)
     println(s"Input file: $inputFile")
     println(s"Output file: $outputFile")
     println(s"Number of workers: $numWorkers")
     println(s"Number of partitions: $numPartitions")
     println(s"Analysis approach: ${CoOccurrenceAnalysis.approachName(approach)}")
     println(s"Partitioner: Hash (via repartition)")
-    println("=" * 70)
+    println("*" * 70)
   }
 
   private def printResultsSummary(
                                    pair: analysis.LocationPair,
                                    result: analysis.AnalysisResult
                                  ): Unit = {
-    println("\n" + "=" * 70)
+    println("\n" + "*" * 70)
     println("RESULTS SUMMARY")
-    println("=" * 70)
+    println("*" * 70)
     println(s"Max co-occurrence pair:")
     println(s"  Location 1: ${pair.first}")
     println(s"  Location 2: ${pair.second}")
@@ -184,15 +184,15 @@ object Main {
                                        totalTime: Long,
                                        approach: analysis.CoOccurrenceAnalysis.AnalysisApproach
                                      ): Unit = {
-    println("\n" + "=" * 70)
+    println("\n" + "*" * 70)
     println("PERFORMANCE SUMMARY")
-    println("=" * 70)
+    println("*" * 70)
     println(f"Load time:     ${loadTime}%8d ms (${loadTime / 1000.0}%6.2f s)")
     println(f"Analysis time: ${analysisTime}%8d ms (${analysisTime / 1000.0}%6.2f s)")
     println(f"Total time:    ${totalTime}%8d ms (${totalTime / 1000.0}%6.2f s)")
     println(f"Approach:      ${CoOccurrenceAnalysis.approachName(approach)}")
     println(f"Partitioner:   Hash (via repartition)")
-    println("=" * 70)
+    println("*" * 70)
     println("\nMetrics CSV file has been generated for report analysis.")
   }
 }

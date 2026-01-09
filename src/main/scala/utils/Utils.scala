@@ -48,7 +48,7 @@ object Utils {
    * Elimina automaticamente la directory se esiste.
    */
   def saveOutput(spark: SparkSession, content: String, outputPath: String): Unit = {
-    // ✅ Elimina directory esistente
+    //Elimina directory esistente
     deletePathIfExists(spark, outputPath)
 
     val sc = spark.sparkContext

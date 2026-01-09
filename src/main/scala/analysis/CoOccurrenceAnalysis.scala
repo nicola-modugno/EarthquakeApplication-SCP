@@ -36,7 +36,7 @@ object CoOccurrenceAnalysis {
       case ReduceByKeyApproach =>
         findMaxCoOccurrenceReduceByKey(events, numPartitions)
       case _ =>
-        println(s"Warning: Unknown approach, falling back to GroupByKey")
+        println(s"WARNING: Unknown approach, falling back to GroupByKey")
         findMaxCoOccurrenceGroupByKey(events, numPartitions)
     }
   }
@@ -69,7 +69,7 @@ object CoOccurrenceAnalysis {
     val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
-    // ✅ Repartitioning esplicito come richiesto dal progetto
+
     println(s"Step 2.1: Repartitioning data to $numPartitions partitions using repartition()...")
     val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
 
@@ -130,7 +130,6 @@ object CoOccurrenceAnalysis {
     val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
-    // ✅ Repartitioning esplicito
     println(s"Step 2.1: Repartitioning data to $numPartitions partitions using repartition()...")
     val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
 
@@ -198,7 +197,6 @@ object CoOccurrenceAnalysis {
     val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
-    // ✅ Repartitioning esplicito
     println(s"Step 2.1: Repartitioning data to $numPartitions partitions using repartition()...")
     val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
 
