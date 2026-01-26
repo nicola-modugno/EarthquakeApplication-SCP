@@ -77,9 +77,12 @@ spark-submit \
 <input-file> <output-dir> <num-partitions> <approach> <partitioner> <num-workers>
 ```
 
-- **approach**: `groupbykey` | `aggregatebykey` | `reducebykey`
-- **partitioner**: `hash` | `range`
-- **num-workers**: `1` (locale) | `2-4` (cloud)
+**Parametri:**
+- `input-file`: Path al file CSV con dati terremoti
+- `output-dir`: Directory di output per risultati e metriche
+- `num-partitions`: Numero di partizioni per `repartition()` (default: 8)
+- `approach`: `groupbykey` | `aggregatebykey` | `reducebykey` (default: groupbykey)
+- `num-workers`: Numero worker nodes nel cluster (default: 1)
 
 ## 📊 Sistema Metriche Automatico
 
