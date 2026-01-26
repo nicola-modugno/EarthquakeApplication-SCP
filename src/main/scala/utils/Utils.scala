@@ -35,11 +35,11 @@ object Utils {
       if (fs.exists(hadoopPath)) {
         println(s"Deleting existing directory: $path")
         fs.delete(hadoopPath, true) // true = ricorsivo
-        println(s"✓ Directory deleted")
+        println(s"Directory deleted")
       }
     } catch {
       case e: Exception =>
-        println(s"Warning: Could not delete $path: ${e.getMessage}")
+        println(s"WARNING: Could not delete $path: ${e.getMessage}")
     }
   }
 

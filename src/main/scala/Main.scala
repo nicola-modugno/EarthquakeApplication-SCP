@@ -137,25 +137,20 @@ object Main {
                            approach: analysis.CoOccurrenceAnalysis.AnalysisApproach,
                            numWorkers: Int
                          ): Unit = {
-    println("*" * 70)
     println("EARTHQUAKE CO-OCCURRENCE ANALYSIS")
-    println("*" * 70)
     println(s"Input file: $inputFile")
     println(s"Output file: $outputFile")
     println(s"Number of workers: $numWorkers")
     println(s"Number of partitions: $numPartitions")
     println(s"Analysis approach: ${CoOccurrenceAnalysis.approachName(approach)}")
     println(s"Partitioner: Hash (via repartition)")
-    println("*" * 70)
   }
 
   private def printResultsSummary(
                                    pair: analysis.LocationPair,
                                    result: analysis.AnalysisResult
                                  ): Unit = {
-    println("\n" + "*" * 70)
     println("RESULTS SUMMARY")
-    println("*" * 70)
     println(s"Max co-occurrence pair:")
     println(s"  Location 1: ${pair.first}")
     println(s"  Location 2: ${pair.second}")
@@ -184,7 +179,6 @@ object Main {
                                        totalTime: Long,
                                        approach: analysis.CoOccurrenceAnalysis.AnalysisApproach
                                      ): Unit = {
-    println("\n" + "*" * 70)
     println("PERFORMANCE SUMMARY")
     println("*" * 70)
     println(f"Load time:     ${loadTime}%8d ms (${loadTime / 1000.0}%6.2f s)")
@@ -192,7 +186,6 @@ object Main {
     println(f"Total time:    ${totalTime}%8d ms (${totalTime / 1000.0}%6.2f s)")
     println(f"Approach:      ${CoOccurrenceAnalysis.approachName(approach)}")
     println(f"Partitioner:   Hash (via repartition)")
-    println("*" * 70)
     println("\nMetrics CSV file has been generated for report analysis.")
   }
 }
