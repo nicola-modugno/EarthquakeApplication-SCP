@@ -230,12 +230,11 @@ Soluzione: Cambiare region o attendere
 ### File di Progetto
 
 - **[COMPLETE-GUIDE.md](COMPLETE-GUIDE.md)**: Guida completa setup e testing
-- **[RELAZIONE.pdf](Report.pdf)**: Relazione del progetto
 - **Scaladoc**: Generata in `target/scala-2.12/api/index.html` dopo compilazione
 
 ---
 
 **Autore**: Nicola Modugno  
 **Corso**: Scalable and Cloud Programming  
-**A.A.**: 2024-25  
-**Università**: [Università di Bologna]
+**A.A.**: 2025-26  
+[Università di Bologna]
