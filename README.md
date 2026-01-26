@@ -84,19 +84,6 @@ spark-submit \
 - `approach`: `groupbykey` | `aggregatebykey` | `reducebykey` (default: groupbykey)
 - `num-workers`: Numero worker nodes nel cluster (default: 1)
 
-**Esempi:**
-
-```bash
-# GroupByKey con 16 partizioni, 2 workers
-./app input.csv output 16 groupbykey 2
-
-# AggregateByKey con 32 partizioni, 3 workers
-./app input.csv output 32 aggregatebykey 3
-
-# ReduceByKey con 48 partizioni, 4 workers
-./app input.csv output 48 reducebykey 4
-```
-
 ## 📊 Sistema Metriche Automatico
 
 Il progetto genera automaticamente un file CSV con tutte le metriche necessarie per l'analisi delle performance.
