@@ -237,4 +237,4 @@ Soluzione: Cambiare region o attendere
 **Autore**: Nicola Modugno  
 **Corso**: Scalable and Cloud Programming  
 **A.A.**: 2025-26  
-[Università di Bologna]
+**Università di Bologna**
