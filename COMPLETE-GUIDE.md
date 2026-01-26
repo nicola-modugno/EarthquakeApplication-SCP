@@ -260,7 +260,7 @@ create_cluster() {
     echo "Total vCPU: 20 (master + 4 workers)"
   fi
   
-  echo "=========================================="
+  echo "******************************************"
   
   gcloud dataproc clusters create $cluster \
     --region=$REGION \
@@ -284,9 +284,9 @@ run_job() {
   local output="gs://$BUCKET/output/${workers}w-${partitions}p-${approach}"
   
   echo ""
-  echo "=============================================="
+  echo "**********************************************"
   echo "Running: $workers workers, $partitions partitions, $approach"
-  echo "=============================================="
+  echo "**********************************************"
   
   gcloud dataproc jobs submit spark \
     --cluster=$cluster \
@@ -315,9 +315,9 @@ delete_cluster() {
   local cluster="earthquake-cluster-${workers}w"
   
   echo ""
-  echo "=========================================="
+  echo "******************************************"
   echo "Deleting cluster $cluster..."
-  echo "=========================================="
+  echo "******************************************"
   
   gcloud dataproc clusters delete $cluster --region=$REGION --quiet
   echo "Waiting for resources to be released..."
