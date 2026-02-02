@@ -69,7 +69,7 @@ EarthquakeAnalysis-SCP/
 │   ├── extraction/
 │   |   └── DataExtractor.scala
 │   └── utils/
-│   |   └── Utils.scala
+│       └── Utils.scala
 ├── build.sbt
 └── project/
 ```
