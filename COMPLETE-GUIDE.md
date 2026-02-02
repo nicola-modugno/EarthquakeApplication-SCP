@@ -58,15 +58,25 @@ EarthquakeAnalysis-SCP/
 ├── src/main/scala/
 │   ├── Main.scala
 │   ├── analysis/
+│   |   ├── AnalysisResult.scala
+│   |   ├── Create AnalysisResult.scala
+│   |   ├── CoOccurrenceAnalysis.scala
+│   |   ├── EarthquakeEvent.scala
+│   |   ├── ExecutionMetrics.scala
+│   |   ├── Location.scala
+│   |   ├── LocationPair.scala
+│   |   └── MetricsCollector.scala
 │   ├── extraction/
+│   |   └── DataExtractor.scala
 │   └── utils/
+│       └── Utils.scala
 ├── build.sbt
 └── project/
 ```
 
 ### 2. Dataset di Test
 
-Crea `test-data.csv`:
+Cerca `test-data.csv`:
 
 ```csv
 time,latitude,longitude,depth,mag
@@ -80,7 +90,7 @@ time,latitude,longitude,depth,mag
 
 **Requisiti formato:**
 - Header con `time,latitude,longitude` (minimo)
-- Time in formato ISO8601: `YYYY-MM-DDTHH:MM:SS.sssZ`
+- Time in formato: `YYYY-MM-DDTHH:MM:SS.sssZ`
 - Coordinate decimali
 
 ---
@@ -248,7 +258,6 @@ create_cluster() {
   local cluster="earthquake-cluster-${workers}w"
   
   echo ""
-  echo "=========================================="
   echo "Creating ${workers}-worker cluster..."
   echo "All machines: n2-standard-4 (4 vCPU, 16GB RAM)"
   
@@ -259,8 +268,6 @@ create_cluster() {
   elif [ $workers -eq 4 ]; then
     echo "Total vCPU: 20 (master + 4 workers)"
   fi
-  
-  echo "******************************************"
   
   gcloud dataproc clusters create $cluster \
     --region=$REGION \
@@ -284,9 +291,7 @@ run_job() {
   local output="gs://$BUCKET/output/${workers}w-${partitions}p-${approach}"
   
   echo ""
-  echo "**********************************************"
   echo "Running: $workers workers, $partitions partitions, $approach"
-  echo "**********************************************"
   
   gcloud dataproc jobs submit spark \
     --cluster=$cluster \
@@ -295,14 +300,14 @@ run_job() {
     -- $DATA $output $partitions $approach $workers
   
   if [ $? -eq 0 ]; then
-    echo "✅ Job completed successfully!"
+    echo "Job completed successfully!"
     
     # Scarica metriche
     echo "Downloading metrics..."
     gcloud storage cat "${output}/metrics/part-*" > "metrics-${workers}w-${partitions}p-${approach}.csv" 2>/dev/null
     
     if [ $? -eq 0 ]; then
-      echo "✅ Metrics saved: metrics-${workers}w-${partitions}p-${approach}.csv"
+      echo "Metrics saved: metrics-${workers}w-${partitions}p-${approach}.csv"
     fi
   else
     echo "Errore! -  Job failed!"
@@ -315,53 +320,39 @@ delete_cluster() {
   local cluster="earthquake-cluster-${workers}w"
   
   echo ""
-  echo "******************************************"
   echo "Deleting cluster $cluster..."
-  echo "******************************************"
   
   gcloud dataproc clusters delete $cluster --region=$REGION --quiet
   echo "Waiting for resources to be released..."
   sleep 30
 }
 
-
-# BANNER
-
-
 echo ""
-echo "************************************************"
-echo "TEST PARTIZIONAMENTO - CONFIGURAZIONI COMPLETE"
-echo "************************************************"
+echo "TEST PARTIZIONAMENTO"
 echo ""
-echo "Configurazione hardware:"
-echo "  - Tipo macchina: n2-standard-4 (4 vCPU, 16GB RAM)"
-echo "  - Partitioner: Hash (via repartition)"
-echo "  - Configurazioni: 2, 3, 4 workers (come da requisiti)"
+echo "Configurazione:"
+echo "  - Partitioner: Hash"
+echo "  - 2, 3, 4 workers"
 echo ""
 echo "Test pianificati:"
 echo "  1. Cluster 2 workers (12 vCPU): 8, 16, 32, 48 partizioni"
 echo "  2. Cluster 3 workers (16 vCPU): 12, 24, 36 partizioni"
 echo "  3. Cluster 4 workers (20 vCPU): 16, 32, 48 partizioni"
 echo ""
-echo "Approcci testati:"
+echo "Approcci da testare:"
 echo "  - GroupByKey (tutte le configurazioni)"
 echo "  - AggregateByKey (partizioni ottimali)"
 echo "  - ReduceByKey (partizioni ottimali)"
-echo ""
-echo "Durata stimata: 3-4 ore"
-echo "Costo stimato: ~$1.50-2.00"
 echo ""
 read -p "Premere INVIO per continuare o Ctrl+C per annullare..."
 echo ""
 
 
-# TEST 2: 3 WORKERS - Variazioni partizioni
+# TEST 2: 3 WORKERS
 
 
 echo ""
-echo "************************************************"
-echo "          3 WORKERS (16 vCPU)"
-echo "************************************************"
+echo "3 WORKERS (16 vCPU)"
 
 create_cluster 3
 if [ $? -eq 0 ]; then
@@ -398,9 +389,7 @@ fi
 # TEST 3: 4 WORKERS - Variazioni partizioni
 
 echo ""
-echo "************************************************"
-echo "          4 WORKERS (20 vCPU)"
-echo "************************************************"
+echo "4 WORKERS (20 vCPU)"
 
 create_cluster 4
 if [ $? -eq 0 ]; then
@@ -437,34 +426,11 @@ fi
 # RIEPILOGO FINALE
 
 echo ""
-echo "************************************************"
-echo "      Esperimenti completati                   "
-echo "************************************************"
+echo "Esperimenti completati"
 echo ""
 echo "Metriche scaricate:"
 ls -lh metrics-*.csv 2>/dev/null | awk '{print "  - " $9 " (" $5 ")"}'
 echo ""
-echo "Totale test eseguiti:"
-echo "  - 2 workers: 8 test"
-echo "  - 3 workers: 5 test"
-echo "  - 4 workers: 5 test"
-echo "  TOTALE: 18 test"
-echo ""
-echo "FORMATO METRICHE CSV:"
-echo "approach,num_workers,num_partitions,total_events,unique_events,co_occurrences,load_time_ms,analysis_time_ms,total_time_ms,max_count,timestamp"
-echo ""
-echo "Prossimi passi:"
-echo "1. Unisci tutti i CSV: cat metrics-*.csv | grep -v '^approach' > all-metrics.csv"
-echo "2. Aggiungi header: echo 'approach,num_workers,num_partitions,...' | cat - all-metrics.csv > final-metrics.csv"
-echo "3. Analizza con Excel/Python/R"
-echo "4. Crea grafici per relazione"
-echo "5. Scrivi analisi risultati"
-echo ""
-echo "Grafici consigliati:"
-echo "  1. Impatto partizioni (per ogni approccio)"
-echo "  2. Confronto approcci (per ogni configurazione workers)"
-echo "  3. Scalabilità workers (per partizioni ottimali)"
-echo "  4. Zona ottimale partitions/vCPU ratio"
 
 ```
 ### 4. Download Risultati
@@ -525,19 +491,6 @@ gcloud auth application-default login
 # Verifica ruolo
 gcloud projects get-iam-policy $PROJECT_ID
 ```
-
-### Job Timeout
-
-**Diagnosi:**
-```bash
-# Verifica job attivo
-gcloud dataproc jobs list --region=$REGION --limit=5
-
-# Vedi log
-gcloud dataproc jobs describe JOB_ID --region=$REGION
-```
-
-**Soluzioni:** Aumenta partizioni o verifica configurazione cluster
 
 ---
 

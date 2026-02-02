@@ -222,37 +222,6 @@ Per testare tutte le configurazioni (2, 3, 4 workers con n2-standard-4):
 - **Quota minima**: 12 vCPU (solo 2 workers)
 - **Quota raccomandata**: 24 vCPU (tutte le configurazioni)
 
-## 🐛 Troubleshooting
-
-### OutOfMemoryError
-
-```
-Soluzione: Ridurre executor memory o aumentare partizioni
---conf spark.executor.memory=8g
---conf spark.executor.memoryOverhead=2g
-```
-
-### Job troppo lento
-
-```
-Causa: Numero partizioni subottimale
-Soluzione: Testare 2-4× numero vCPU cluster
-```
-
-### Quota vCPU insufficiente
-
-```
-Errore: CPUS_ALL_REGIONS quota exceeded
-Soluzione: Richiedere aumento quota
-```
-
-### Cluster creation timeout
-
-```
-Causa: Region sovraccarica o quota esaurita
-Soluzione: Cambiare region o attendere
-```
-
 ## 📚 Documentazione Aggiuntiva
 
 ### File di Progetto
