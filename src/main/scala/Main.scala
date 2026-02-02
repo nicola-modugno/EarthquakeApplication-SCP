@@ -180,7 +180,6 @@ object Main {
                                        approach: analysis.CoOccurrenceAnalysis.AnalysisApproach
                                      ): Unit = {
     println("PERFORMANCE SUMMARY")
-    println("*" * 70)
     println(f"Load time:     ${loadTime}%8d ms (${loadTime / 1000.0}%6.2f s)")
     println(f"Analysis time: ${analysisTime}%8d ms (${analysisTime / 1000.0}%6.2f s)")
     println(f"Total time:    ${totalTime}%8d ms (${totalTime / 1000.0}%6.2f s)")

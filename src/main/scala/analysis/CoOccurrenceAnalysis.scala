@@ -25,8 +25,8 @@ object CoOccurrenceAnalysis {
                            approach: AnalysisApproach = GroupByKeyApproach
                          ): AnalysisResult = {
 
-    println(s"\n=== Using approach: ${approachName(approach)} ===")
-    println(s"=== Using $numPartitions partitions ===\n")
+    println(s"\nUsing approach: ${approachName(approach)}")
+    println(s"Using $numPartitions partitions\n")
 
     approach match {
       case GroupByKeyApproach =>
