@@ -9,10 +9,10 @@ import scala.math.BigDecimal.RoundingMode
 object Utils {
 
   /**
-   * Scarta le cifre decimali successive alla prima di una coordinata: arrotondamento con DOWN.
+   * Scarta le cifre decimali successive alla prima di una coordinata: arrotondamento con HALF_UP.
    */
   def roundCoordinate(coord: Double): Double = {
-    BigDecimal(coord).setScale(1, RoundingMode.DOWN).toDouble
+    BigDecimal(coord).setScale(1, RoundingMode.HALF_UP).toDouble
   }
 
   /**

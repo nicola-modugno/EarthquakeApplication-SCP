@@ -1,10 +1,8 @@
-import analysis.CoOccurrenceAnalysis
+import analysis.{CoOccurrenceAnalysis, ExecutionMetrics, MetricsCollector}
 import extraction.DataExtractor
-import analysis.ExecutionMetrics
-import analysis.MetricsCollector
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 import utils.Utils
-import org.apache.log4j.{Level, Logger}
 
 object Main {
 

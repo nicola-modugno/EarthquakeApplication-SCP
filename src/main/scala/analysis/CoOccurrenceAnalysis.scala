@@ -48,7 +48,9 @@ object CoOccurrenceAnalysis {
                                              events: RDD[EarthquakeEvent],
                                              numPartitions: Int
                                            ): AnalysisResult = {
-
+    println("The events are: ")
+    events.foreach(println)
+    println("")
     println("Step 1: Normalizzazione coordinate...")
     val normalizedEvents = events
       .map(e => (
@@ -60,6 +62,9 @@ object CoOccurrenceAnalysis {
 
     val totalCount = normalizedEvents.count()
     println(s"Total events loaded: $totalCount")
+    println("Normalized events are: ")
+    normalizedEvents.foreach(println)
+    println("")
 
     println("Step 2: Deduplicazione eventi...")
     val uniqueEvents = normalizedEvents
@@ -68,18 +73,23 @@ object CoOccurrenceAnalysis {
 
     val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
+    println(s"Unique events are the following: ")
+    uniqueEvents.foreach(println)
 
-
-    println(s"Step 2.1: Repartitioning data to $numPartitions partitions using repartition()...")
+    println(s"Step 3: Repartitioning data to $numPartitions partitions using repartition()...")
     val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
+    println(s"Repartitioned events are the following: ")
+    repartitionedEvents.foreach(println)
 
-    println("Step 3: Raggruppamento per data (groupByKey)...")
+    println("Step 4: Raggruppamento per data (groupByKey)...")
     val eventsByDate = repartitionedEvents
       .map { case (location, date) => (date, location) }
 
     val locationsByDate = eventsByDate.groupByKey()
+    println(s"grouped events are the following: ")
+    locationsByDate.foreach(println)
 
-    println("Step 4: Generazione coppie di località...")
+    println("Step 5: Generazione coppie di località...")
     val coOccurrences = locationsByDate
       .flatMap { case (date, locations) =>
         val locList = locations.toList.sorted
@@ -92,11 +102,14 @@ object CoOccurrenceAnalysis {
 
     val coOccCount = coOccurrences.count()
     println(s"Total co-occurrences found: $coOccCount")
+    println(s"The co-occurrences are: ")
+    coOccurrences.foreach(println)
 
-    println("Step 5: Conteggio co-occorrenze per coppia...")
+    println("Step 6: Conteggio co-occorrenze per coppia...")
     val pairCounts = coOccurrences
       .map { case (pair, _) => (pair, 1) }
-      .reduceByKey(_ + _)
+      .groupByKey()
+      .mapValues(_.sum)
       .persist()
 
     extractResults(pairCounts, coOccurrences, totalCount, uniqueCount, coOccCount)
@@ -130,10 +143,10 @@ object CoOccurrenceAnalysis {
     val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
-    println(s"Step 2.1: Repartitioning data to $numPartitions partitions using repartition()...")
+    println(s"Step 3: Repartitioning data to $numPartitions partitions using repartition()...")
     val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
 
-    println("Step 3: Aggregazione per data (aggregateByKey)...")
+    println("Step 4: Aggregazione per data (aggregateByKey)...")
     val eventsByDate = repartitionedEvents
       .map { case (location, date) => (date, location) }
 
@@ -143,7 +156,7 @@ object CoOccurrenceAnalysis {
         (set1, set2) => set1 ++ set2
       )
 
-    println("Step 4: Generazione coppie di località...")
+    println("Step 5: Generazione coppie di località...")
     val coOccurrences = locationsByDate
       .flatMap { case (date, locations) =>
         val locList = locations.toList.sorted
@@ -157,10 +170,10 @@ object CoOccurrenceAnalysis {
     val coOccCount = coOccurrences.count()
     println(s"Total co-occurrences found: $coOccCount")
 
-    println("Step 5: Conteggio co-occorrenze per coppia...")
+    println("Step 6: Conteggio co-occorrenze per coppia...")
     val pairCounts = coOccurrences
       .map { case (pair, _) => (pair, 1) }
-      .reduceByKey(_ + _)
+      .aggregateByKey(0)(_ + _, _ + _)
       .persist()
 
     extractResults(pairCounts, coOccurrences, totalCount, uniqueCount, coOccCount)
@@ -188,29 +201,23 @@ object CoOccurrenceAnalysis {
 
     println("Step 2: Deduplicazione eventi...")
     val uniqueEvents = normalizedEvents
-      .map { case (lat, lon, date) =>
-        ((Location(lat, lon), date), 1)
-      }
-      .reduceByKey(_ + _)
-      .map { case ((location, date), _) => (location, date) }
+      .map { case (lat, lon, date) => (Location(lat, lon), date) }
+      .distinct()
 
     val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
 
-    println(s"Step 2.1: Repartitioning data to $numPartitions partitions using repartition()...")
+    println(s"Step 3: Repartitioning data to $numPartitions partitions using repartition()...")
     val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
 
-    println("Step 3: Aggregazione località per data...")
+    println("Step 4: Aggregazione per data (reduceByKey)...")
     val eventsByDate = repartitionedEvents
-      .map { case (location, date) => (date, location) }
+      .map { case (location, date) => (date, Set(location)) }
 
     val locationsByDate = eventsByDate
-      .aggregateByKey(Set.empty[Location])(
-        (set, loc) => set + loc,
-        (set1, set2) => set1 ++ set2
-      )
+      .reduceByKey(_ ++ _)
 
-    println("Step 4: Generazione e conteggio coppie...")
+    println("Step 5: Generazione e conteggio coppie...")
     val coOccurrences = locationsByDate
       .flatMap { case (date, locations) =>
         val locList = locations.toList.sorted
@@ -243,7 +250,7 @@ object CoOccurrenceAnalysis {
                               coOccCount: Long
                             ): AnalysisResult = {
 
-    println("Step 6: Ricerca coppia con massime co-occorrenze...")
+    println("Step 7: Ricerca coppia con massime co-occorrenze...")
 
     val maxPairOption = if (pairCounts.isEmpty()) {
       None
@@ -255,7 +262,7 @@ object CoOccurrenceAnalysis {
       case Some((maxPair, count)) =>
         println(s"Max co-occurrence pair: $maxPair with $count occurrences")
 
-        println("Step 7: Estrazione date per la coppia massima...")
+        println("Step 8: Estrazione date per la coppia massima...")
         val dates = coOccurrences
           .filter { case (pair, _) => pair == maxPair }
           .map { case (_, date) => date }
