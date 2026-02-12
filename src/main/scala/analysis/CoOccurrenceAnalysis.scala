@@ -28,29 +28,7 @@ object CoOccurrenceAnalysis {
     println(s"\nUsing approach: ${approachName(approach)}")
     println(s"Using $numPartitions partitions\n")
 
-    approach match {
-      case GroupByKeyApproach =>
-        findMaxCoOccurrenceGroupByKey(events, numPartitions)
-      case AggregateByKeyApproach =>
-        findMaxCoOccurrenceAggregateByKey(events, numPartitions)
-      case ReduceByKeyApproach =>
-        findMaxCoOccurrenceReduceByKey(events, numPartitions)
-      case _ =>
-        println(s"WARNING: Unknown approach, falling back to GroupByKey")
-        findMaxCoOccurrenceGroupByKey(events, numPartitions)
-    }
-  }
-
-  /**
-   * APPROCCIO 1: GroupByKey
-   */
-  private def findMaxCoOccurrenceGroupByKey(
-                                             events: RDD[EarthquakeEvent],
-                                             numPartitions: Int
-                                           ): AnalysisResult = {
-    println("The events are: ")
-    events.foreach(println)
-    println("")
+    // Step 1: Normalizzazione coordinate
     println("Step 1: Normalizzazione coordinate...")
     val normalizedEvents = events
       .map(e => (
@@ -62,10 +40,8 @@ object CoOccurrenceAnalysis {
 
     val totalCount = normalizedEvents.count()
     println(s"Total events loaded: $totalCount")
-    println("Normalized events are: ")
-    normalizedEvents.foreach(println)
-    println("")
 
+    // Step 2: Deduplicazione eventi
     println("Step 2: Deduplicazione eventi...")
     val uniqueEvents = normalizedEvents
       .map { case (lat, lon, date) => (Location(lat, lon), date) }
@@ -73,89 +49,21 @@ object CoOccurrenceAnalysis {
 
     val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
-    println(s"Unique events are the following: ")
-    uniqueEvents.foreach(println)
+    normalizedEvents.unpersist()
 
+    // Step 3: Repartitioning
     println(s"Step 3: Repartitioning data to $numPartitions partitions using repartition()...")
     val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
-    println(s"Repartitioned events are the following: ")
-    repartitionedEvents.foreach(println)
 
+    // Step 4: Raggruppamento location per data (comune - sempre groupByKey)
+    // Questo è un "collect all" che non comprime: groupByKey è il più
+    // diretto perché shuffla coppie (date, location) leggere
     println("Step 4: Raggruppamento per data (groupByKey)...")
-    val eventsByDate = repartitionedEvents
+    val locationsByDate = repartitionedEvents
       .map { case (location, date) => (date, location) }
-
-    val locationsByDate = eventsByDate.groupByKey()
-    println(s"grouped events are the following: ")
-    locationsByDate.foreach(println)
-
-    println("Step 5: Generazione coppie di località...")
-    val coOccurrences = locationsByDate
-      .flatMap { case (date, locations) =>
-        val locList = locations.toList.sorted
-        for {
-          i <- locList.indices
-          j <- (i + 1) until locList.length
-        } yield (LocationPair(locList(i), locList(j)), date)
-      }
-      .persist()
-
-    val coOccCount = coOccurrences.count()
-    println(s"Total co-occurrences found: $coOccCount")
-    println(s"The co-occurrences are: ")
-    coOccurrences.foreach(println)
-
-    println("Step 6: Conteggio co-occorrenze per coppia...")
-    val pairCounts = coOccurrences
-      .map { case (pair, _) => (pair, 1) }
       .groupByKey()
-      .mapValues(_.sum)
-      .persist()
 
-    extractResults(pairCounts, coOccurrences, totalCount, uniqueCount, coOccCount)
-  }
-
-  /**
-   * APPROCCIO 2: AggregateByKey
-   */
-  private def findMaxCoOccurrenceAggregateByKey(
-                                                 events: RDD[EarthquakeEvent],
-                                                 numPartitions: Int
-                                               ): AnalysisResult = {
-
-    println("Step 1: Normalizzazione coordinate...")
-    val normalizedEvents = events
-      .map(e => (
-        Utils.roundCoordinate(e.latitude),
-        Utils.roundCoordinate(e.longitude),
-        e.date
-      ))
-      .persist()
-
-    val totalCount = normalizedEvents.count()
-    println(s"Total events loaded: $totalCount")
-
-    println("Step 2: Deduplicazione eventi...")
-    val uniqueEvents = normalizedEvents
-      .map { case (lat, lon, date) => (Location(lat, lon), date) }
-      .distinct()
-
-    val uniqueCount = uniqueEvents.count()
-    println(s"Unique events after deduplication: $uniqueCount")
-
-    println(s"Step 3: Repartitioning data to $numPartitions partitions using repartition()...")
-    val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
-
-    println("Step 4: Aggregazione per data (aggregateByKey)...")
-    val eventsByDate = repartitionedEvents
-      .map { case (location, date) => (date, location) }
-
-    val locationsByDate = eventsByDate
-      .aggregateByKey(Set.empty[Location])(
-        (set, loc) => set + loc,
-        (set1, set2) => set1 ++ set2
-      )
-
+    // Step 5: Generazione coppie di co-occorrenze (comune)
     println("Step 5: Generazione coppie di località...")
     val coOccurrences = locationsByDate
       .flatMap { case (date, locations) =>
@@ -165,82 +73,51 @@ object CoOccurrenceAnalysis {
           j <- (i + 1) until locList.length
         } yield (LocationPair(locList(i), locList(j)), date)
       }
-      .persist()
 
     val coOccCount = coOccurrences.count()
     println(s"Total co-occurrences found: $coOccCount")
 
-    println("Step 6: Conteggio co-occorrenze per coppia...")
-    val pairCounts = coOccurrences
-      .map { case (pair, _) => (pair, 1) }
-      .aggregateByKey(0)(_ + _, _ + _)
-      .persist()
+    // Step 6: Conteggio co-occorrenze per coppia (DIFFERENZIATO)
+    // Qui i tre approcci si confrontano su (LocationPair, 1) => somma:
+    // il caso classico dove reduceByKey eccelle
+    println(s"Step 6: Conteggio co-occorrenze per coppia (${approachName(approach)})...")
+    val pairCounts = approach match {
+      case GroupByKeyApproach =>
+        coOccurrences
+          .map { case (pair, _) => (pair, 1) }
+          .groupByKey()
+          .mapValues(_.sum)
 
-    extractResults(pairCounts, coOccurrences, totalCount, uniqueCount, coOccCount)
+      case AggregateByKeyApproach =>
+        coOccurrences
+          .map { case (pair, _) => (pair, 1) }
+          .aggregateByKey(0)(_ + _, _ + _)
+
+      case ReduceByKeyApproach =>
+        coOccurrences
+          .map { case (pair, _) => (pair, 1) }
+          .reduceByKey(_ + _)
+
+      case _ =>
+        println("WARNING: Unknown approach, falling back to GroupByKey")
+        coOccurrences
+          .map { case (pair, _) => (pair, 1) }
+          .groupByKey()
+          .mapValues(_.sum)
+    }
+
+    // Step 7: Ricerca coppia massima + estrazione date
+    val result = extractResults(pairCounts, coOccurrences, totalCount, uniqueCount, coOccCount)
+
+    // Cleanup
+    repartitionedEvents.unpersist()
+
+    result
   }
 
   /**
-   * APPROCCIO 3: ReduceByKey
-   */
-  private def findMaxCoOccurrenceReduceByKey(
-                                              events: RDD[EarthquakeEvent],
-                                              numPartitions: Int
-                                            ): AnalysisResult = {
-
-    println("Step 1: Normalizzazione coordinate...")
-    val normalizedEvents = events
-      .map(e => (
-        Utils.roundCoordinate(e.latitude),
-        Utils.roundCoordinate(e.longitude),
-        e.date
-      ))
-      .persist()
-
-    val totalCount = normalizedEvents.count()
-    println(s"Total events loaded: $totalCount")
-
-    println("Step 2: Deduplicazione eventi...")
-    val uniqueEvents = normalizedEvents
-      .map { case (lat, lon, date) => (Location(lat, lon), date) }
-      .distinct()
-
-    val uniqueCount = uniqueEvents.count()
-    println(s"Unique events after deduplication: $uniqueCount")
-
-    println(s"Step 3: Repartitioning data to $numPartitions partitions using repartition()...")
-    val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
-
-    println("Step 4: Aggregazione per data (reduceByKey)...")
-    val eventsByDate = repartitionedEvents
-      .map { case (location, date) => (date, Set(location)) }
-
-    val locationsByDate = eventsByDate
-      .reduceByKey(_ ++ _)
-
-    println("Step 5: Generazione e conteggio coppie...")
-    val coOccurrences = locationsByDate
-      .flatMap { case (date, locations) =>
-        val locList = locations.toList.sorted
-        for {
-          i <- locList.indices
-          j <- (i + 1) until locList.length
-        } yield (LocationPair(locList(i), locList(j)), date)
-      }
-      .persist()
-
-    val coOccCount = coOccurrences.count()
-    println(s"Total co-occurrences found: $coOccCount")
-
-    val pairCounts = coOccurrences
-      .map { case (pair, _) => (pair, 1) }
-      .reduceByKey(_ + _)
-      .persist()
-
-    extractResults(pairCounts, coOccurrences, totalCount, uniqueCount, coOccCount)
-  }
-
-  /**
-   * Estrae i risultati finali da pairCounts e coOccurrences.
+   * Estrae i risultati finali: trova la coppia con il massimo conteggio
+   * e raccoglie le date di co-occorrenza.
    */
   private def extractResults(
                               pairCounts: RDD[(LocationPair, Int)],
