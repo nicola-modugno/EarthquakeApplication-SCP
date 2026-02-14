@@ -169,8 +169,8 @@ cat output-abk/metrics/part-00000
 
 ---
 
-### Esegui gli esperimenti
-Esegui nel terminale.
+### Esecuzione degli esperimenti
+Esegui nel terminale:
 ```bash
 ./runexps.sh
 ```
