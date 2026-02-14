@@ -10,9 +10,8 @@ Guida operativa per l'esecuzione del progetto di analisi distribuita di co-occor
 2. [Setup Iniziale](#setup-iniziale)
 3. [Compilazione](#compilazione)
 4. [Esecuzione Locale](#esecuzione-locale)
-5. [Deployment su Google Cloud](#deployment-su-google-cloud)
-6. [Analisi Risultati](#analisi-risultati)
-7. [Troubleshooting](#troubleshooting)
+5. [Esecuzione degli esperimenti](#esecuzione-degli-esperimenti)
+6. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -177,7 +176,7 @@ cat output-abk/metrics/part-00000
 
 ---
 
-### Esecuzione degli esperimenti
+## Esecuzione degli esperimenti
 Esegui nel terminale:
 ```bash
 ./runexps.sh
@@ -219,7 +218,7 @@ Opzioni:
 
 Scelta (1-6):
 ```
-
+Al termine degli esperimenti il programma scaricherà automaticamente i risultati in formato csv.
 ---
 
 ## Troubleshooting
