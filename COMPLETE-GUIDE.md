@@ -169,90 +169,47 @@ cat output-abk/metrics/part-00000
 
 ---
 
-## Deployment su Google Cloud
-
-### 1. Setup Storage
-
+### Esegui gli esperimenti
+Esegui nel terminale.
 ```bash
-BUCKET="bucket_scp_1"
-PROJECT="your-project-id"
-REGION="europe-west1"
-
-# Configura progetto
-gcloud config set project $PROJECT
-
-# Crea bucket
-gcloud storage buckets create gs://$BUCKET --location=$REGION
-
-# Upload JAR e dataset
-gcloud storage cp target/scala-2.12/earthquake-application.jar gs://$BUCKET/jars/
-gcloud storage cp dataset-earthquakes-full.csv gs://$BUCKET/data/
+./runexps.sh
 ```
-
-### 2. Creazione Cluster
-
-**Configurazione standard n2-standard-4:**
-
+Comparirà la seguente schermata in cui dovrà essere compilato ciascun campo.
 ```bash
-# 2 workers (12 vCPU) - Free tier
-gcloud dataproc clusters create earthquake-cluster-2w \
-  --region=$REGION \
-  --image-version=2.1-debian11 \
-  --num-workers 2 \
-  --master-boot-disk-size 240 \
-  --worker-boot-disk-size 240 \
-  --master-machine-type=n2-standard-4 \
-  --worker-machine-type=n2-standard-4 \
-  --properties=spark:spark.executor.memory=10g,spark:spark.driver.memory=6g,spark:spark.executor.memoryOverhead=2g,spark:spark.driver.memoryOverhead=1g
+  CONFIGURAZIONE PARAMETRI
 
-# 3 workers (16 vCPU) - Richiede quota 24 vCPU
-gcloud dataproc clusters create earthquake-cluster-3w \
-  --region=$REGION \
-  --num-workers 3 \
-  [stessi parametri]
+Inserisci i parametri richiesti:
 
-# 4 workers (20 vCPU) - Richiede quota 24 vCPU
-gcloud dataproc clusters create earthquake-cluster-4w \
-  --region=$REGION \
-  --num-workers 4 \
-  [stessi parametri]
+BUCKET (Nome del bucket GCS): il_mio_bucket
+JAR (Path completo al JAR, es: gs://bucket/jars/app.jar): path_al_jar
+DATASET: path_al_datasetdataset, es: gs://bucket/data/file.csv): path_al_datas  REGION:  path_al_dataset
+REGION (Regione GCP, es: europe-west1): regione
+Confermi e procedi? (y/n): y
 ```
-
-**Nota:** Configurazioni 3w/4w richiedono aumento quota vCPU a 24.
-
-### 3. Esecuzione Job
-
+Dopo aver inserito i dati e aver confermato comparirà la seguente schermata in cui è possibile scegliere quali esperimenti eseguire o se eseguire la cancellazione dei cluster (questa verrà fatta in automatico alla fine di ogni esperimento)
 ```bash
-# Parametri
-BUCKET_NAME="earthquake-analysis-TUOMATRICOLA"  # Il TUO bucket!
-CLUSTER_NAME="earthquake-cluster-2w"
-REGION="europe-west1"
+  RIEPILOGO CONFIGURAZIONE
+  EARTHQUAKE CO-OCCURRENCE EXPERIMENTS
+  JAR:     path_al_ar
+Test pianificati:
+  1. Cluster 2 workers (8 vCPU): 8, 16, 32, 48 partizioni
+  2. Cluster 3 workers (12 vCPU): 16, 32, 48 partizioni
+  3. Cluster 4 workers (16 vCPU): 16, 32, 48 partizioni
 
-# Esegui job con GroupByKey e Hash partitioner
-gcloud dataproc jobs submit spark \
-  --cluster=earthquake-cluster-2w \
-  --region=$REGION \
-  --jar=gs://$BUCKET/jars/earthquake-application.jar \
-  -- gs://$BUCKET/data/dataset-earthquakes-full.csv \
-     gs://$BUCKET/output/2w-16p-aggregatebykey \
-     16 aggregatebykey 2
-```
+Approcci da testare:
+  - GroupByKey
+  - AggregateByKey
+  - ReduceByKey
 
-### 4. Download Risultati
+Opzioni:
+  1) Esegui tutti i test (raccomandato)
+  2) Solo cluster 2 workers
+  3) Solo cluster 3 workers
+  4) Solo cluster 4 workers
+  5) Pulisci tutti i cluster
+  6) Esci
 
-```bash
-# Metriche specifiche
-gcloud storage cat gs://$BUCKET/output/2w-16p-aggregatebykey/metrics/part-* > metrics.csv
-
-# Tutte le metriche
-gcloud storage cat gs://$BUCKET/output/*/metrics/part-* > all-metrics.csv
-```
-
-### 5. Eliminazione Cluster
-
-```bash
-# IMPORTANTE: Elimina sempre il cluster dopo l'uso
-gcloud dataproc clusters delete earthquake-cluster-2w --region=$REGION --quiet
+Scelta (1-6):
 ```
 
 ---
@@ -297,18 +254,14 @@ gcloud auth application-default login
 gcloud projects get-iam-policy $PROJECT_ID
 ```
 
-### Job Timeout
+### Errore nella cancellazione di una cartella di output
 
-**Diagnosi:**
+**Sintomi:** `? Error during execution: Output directory gs://your_bucket/output/[...] already exists`
+
 ```bash
-# Verifica job attivo
-gcloud dataproc jobs list --region=$REGION --limit=5
-
-# Vedi log
-gcloud dataproc jobs describe JOB_ID --region=$REGION
+gcloud storage rm -r gs://your_bucket/output/
+./runexps.sh
 ```
-
-**Soluzioni:** Aumenta partizioni o verifica configurazione cluster
 
 ---
 
@@ -323,31 +276,8 @@ spark-submit --class Main --master local[*] \
   target/scala-2.12/earthquake-application.jar \
   input.csv output 16 aggregatebykey 1
 
-# Crea cluster (2w)
-gcloud dataproc clusters create earthquake-cluster-2w \
-  --region=europe-west1 --num-workers 2 \
-  --master-machine-type=n2-standard-4 \
-  --worker-machine-type=n2-standard-4
-
-# Submit job
-gcloud dataproc jobs submit spark \
-  --cluster=earthquake-cluster-2w \
-  --region=europe-west1 \
-  --jar=gs://bucket/jars/earthquake-application.jar \
-  -- gs://bucket/data/dataset.csv \
-     gs://bucket/output/2w-16p-abk \
-     16 aggregatebykey 2
-
-# Download metriche
-gcloud storage cat gs://bucket/output/*/metrics/part-* > metrics.csv
-
-# Elimina cluster
-gcloud dataproc clusters delete earthquake-cluster-2w \
-  --region=europe-west1 --quiet
-
-# Verifica quota
-gcloud compute project-info describe \
-  --format="value(quotas)" | grep CPUS
+# Esegui gli esperimenti
+./runexps.sh
 ```
 
 ---
