@@ -10,9 +10,8 @@ Guida operativa per l'esecuzione del progetto di analisi distribuita di co-occor
 2. [Setup Iniziale](#setup-iniziale)
 3. [Compilazione](#compilazione)
 4. [Esecuzione Locale](#esecuzione-locale)
-5. [Deployment su Google Cloud](#deployment-su-google-cloud)
-6. [Analisi Risultati](#analisi-risultati)
-7. [Troubleshooting](#troubleshooting)
+5. [Esecuzione degli esperimenti](#esecuzione-degli-esperimenti)
+6. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -177,279 +176,49 @@ cat output-abk/metrics/part-00000
 
 ---
 
-## Deployment su Google Cloud
-
-### 1. Setup Storage
-
+## Esecuzione degli esperimenti
+Esegui nel terminale:
 ```bash
-BUCKET="bucket_scp_1"
-PROJECT="your-project-id"
-REGION="europe-west1"
-
-# Configura progetto
-gcloud config set project $PROJECT
-
-# Crea bucket
-gcloud storage buckets create gs://$BUCKET --location=$REGION
-
-# Upload JAR e dataset
-gcloud storage cp target/scala-2.12/earthquake-application.jar gs://$BUCKET/jars/
-gcloud storage cp dataset-earthquakes-full.csv gs://$BUCKET/data/
+./runexps.sh
 ```
-
-### 2. Creazione Cluster
-
-**Configurazione standard n2-standard-4:**
-
+Comparirà la seguente schermata in cui dovrà essere compilato ciascun campo.
 ```bash
-# 2 workers (12 vCPU) - Free tier
-gcloud dataproc clusters create earthquake-cluster-2w \
-  --region=$REGION \
-  --image-version=2.1-debian11 \
-  --num-workers 2 \
-  --master-boot-disk-size 240 \
-  --worker-boot-disk-size 240 \
-  --master-machine-type=n2-standard-4 \
-  --worker-machine-type=n2-standard-4 \
-  --properties=spark:spark.executor.memory=10g,spark:spark.driver.memory=6g,spark:spark.executor.memoryOverhead=2g,spark:spark.driver.memoryOverhead=1g
+  CONFIGURAZIONE PARAMETRI
 
-# 3 workers (16 vCPU) - Richiede quota 24 vCPU
-gcloud dataproc clusters create earthquake-cluster-3w \
-  --region=$REGION \
-  --num-workers 3 \
-  [stessi parametri]
+Inserisci i parametri richiesti:
 
-# 4 workers (20 vCPU) - Richiede quota 24 vCPU
-gcloud dataproc clusters create earthquake-cluster-4w \
-  --region=$REGION \
-  --num-workers 4 \
-  [stessi parametri]
+BUCKET (Nome del bucket GCS): il_mio_bucket
+JAR (Path completo al JAR, es: gs://bucket/jars/app.jar): path_al_jar
+DATASET: path_al_datasetdataset, es: gs://bucket/data/file.csv): path_al_datas  REGION:  path_al_dataset
+REGION (Regione GCP, es: europe-west1): regione
+Confermi e procedi? (y/n): y
 ```
-
-**Nota:** Configurazioni 3w/4w richiedono aumento quota vCPU a 24.
-
-### 3. Esecuzione Job
-
+Dopo aver inserito i dati e aver confermato comparirà la seguente schermata in cui è possibile scegliere quali esperimenti eseguire o se eseguire la cancellazione dei cluster (questa verrà fatta in automatico alla fine di ogni esperimento)
 ```bash
-gcloud dataproc jobs submit spark \
-  --cluster=earthquake-cluster-2w \
-  --region=$REGION \
-  --jar=gs://$BUCKET/jars/earthquake-application.jar \
-  -- gs://$BUCKET/data/dataset-earthquakes-full.csv \
-     gs://$BUCKET/output/2w-16p-aggregatebykey \
-     16 aggregatebykey 2
+  RIEPILOGO CONFIGURAZIONE
+  EARTHQUAKE CO-OCCURRENCE EXPERIMENTS
+  JAR:     path_al_ar
+Test pianificati:
+  1. Cluster 2 workers (8 vCPU): 8, 16, 32, 48 partizioni
+  2. Cluster 3 workers (12 vCPU): 16, 32, 48 partizioni
+  3. Cluster 4 workers (16 vCPU): 16, 32, 48 partizioni
+
+Approcci da testare:
+  - GroupByKey
+  - AggregateByKey
+  - ReduceByKey
+
+Opzioni:
+  1) Esegui tutti i test (raccomandato)
+  2) Solo cluster 2 workers
+  3) Solo cluster 3 workers
+  4) Solo cluster 4 workers
+  5) Pulisci tutti i cluster
+  6) Esci
+
+Scelta (1-6):
 ```
-
-## 3.1 Script bash per l'esecuzione di ogni espserimento
-```bash
-#!/bin/bash
-
-# Script per testare diverse configurazioni di partizioni
-
-BUCKET="bucket_scp_1"
-DATASET="dataset-earthquakes-full.csv"
-JAR="gs://$BUCKET/jars/earthquake-application.jar"
-DATA="gs://$BUCKET/data/$DATASET"
-REGION="europe-west1"
-
-# Funzione per creare cluster con n2-standard-4 per tutte le macchine
-create_cluster() {
-  local workers=$1
-  local cluster="earthquake-cluster-${workers}w"
-  
-  echo ""
-  echo "Creating ${workers}-worker cluster..."
-  echo "All machines: n2-standard-4 (4 vCPU, 16GB RAM)"
-  
-  if [ $workers -eq 2 ]; then
-    echo "Total vCPU: 12 (master + 2 workers)"
-  elif [ $workers -eq 3 ]; then
-    echo "Total vCPU: 16 (master + 3 workers)"
-  elif [ $workers -eq 4 ]; then
-    echo "Total vCPU: 20 (master + 4 workers)"
-  fi
-  
-  gcloud dataproc clusters create $cluster \
-    --region=$REGION \
-    --image-version=2.1-debian11 \
-    --num-workers $workers \
-    --master-boot-disk-size 240 \
-    --worker-boot-disk-size 240 \
-    --master-machine-type=n2-standard-4 \
-    --worker-machine-type=n2-standard-4 \
-    --quiet
-  
-  return $?
-}
-
-# Funzione per eseguire job
-run_job() {
-  local workers=$1
-  local partitions=$2
-  local approach=$3
-  local cluster="earthquake-cluster-${workers}w"
-  local output="gs://$BUCKET/output/${workers}w-${partitions}p-${approach}"
-  
-  echo ""
-  echo "Running: $workers workers, $partitions partitions, $approach"
-  
-  gcloud dataproc jobs submit spark \
-    --cluster=$cluster \
-    --region=$REGION \
-    --jar=$JAR \
-    -- $DATA $output $partitions $approach $workers
-  
-  if [ $? -eq 0 ]; then
-    echo "Job completed successfully!"
-    
-    # Scarica metriche
-    echo "Downloading metrics..."
-    gcloud storage cat "${output}/metrics/part-*" > "metrics-${workers}w-${partitions}p-${approach}.csv" 2>/dev/null
-    
-    if [ $? -eq 0 ]; then
-      echo "Metrics saved: metrics-${workers}w-${partitions}p-${approach}.csv"
-    fi
-  else
-    echo "Errore! -  Job failed!"
-  fi
-}
-
-# Funzione per eliminare cluster
-delete_cluster() {
-  local workers=$1
-  local cluster="earthquake-cluster-${workers}w"
-  
-  echo ""
-  echo "Deleting cluster $cluster..."
-  
-  gcloud dataproc clusters delete $cluster --region=$REGION --quiet
-  echo "Waiting for resources to be released..."
-  sleep 30
-}
-
-echo ""
-echo "TEST PARTIZIONAMENTO"
-echo ""
-echo "Configurazione:"
-echo "  - Partitioner: Hash"
-echo "  - 2, 3, 4 workers"
-echo ""
-echo "Test pianificati:"
-echo "  1. Cluster 2 workers (12 vCPU): 8, 16, 32, 48 partizioni"
-echo "  2. Cluster 3 workers (16 vCPU): 12, 24, 36 partizioni"
-echo "  3. Cluster 4 workers (20 vCPU): 16, 32, 48 partizioni"
-echo ""
-echo "Approcci da testare:"
-echo "  - GroupByKey (tutte le configurazioni)"
-echo "  - AggregateByKey (partizioni ottimali)"
-echo "  - ReduceByKey (partizioni ottimali)"
-echo ""
-read -p "Premere INVIO per continuare o Ctrl+C per annullare..."
-echo ""
-
-
-# TEST 2: 3 WORKERS
-
-
-echo ""
-echo "3 WORKERS (16 vCPU)"
-
-create_cluster 3
-if [ $? -eq 0 ]; then
-  
-  # Test GroupByKey con diverse partizioni
-  echo ""
-  echo "--- GroupByKey Tests ---"
-  run_job 3 12 groupbykey
-  run_job 3 24 groupbykey
-  run_job 3 36 groupbykey
-  
-  # Test AggregateByKey (partizioni ottimali)
-  echo ""
-  echo "--- AggregateByKey Tests ---"
-  run_job 3 12 aggregatebykey
-  run_job 3 24 aggregatebykey
-  run_job 3 36 aggregatebykey
-  
-  # Test ReduceByKey (partizioni ottimali)
-  echo ""
-  echo "--- ReduceByKey Tests ---"
-  run_job 3 12 reducebykey
-  run_job 3 24 reducebykey
-  run_job 3 36 reducebykey
-  
-  delete_cluster 3
-else
-  echo "Errore! -  Failed to create 3-worker cluster!"
-  echo "Warning! -   Possibile problema quota vCPU. Verifica con:"
-  echo "    gcloud compute project-info describe --format='value(quotas)' | grep CPUS"
-  exit 1
-fi
-
-# TEST 3: 4 WORKERS - Variazioni partizioni
-
-echo ""
-echo "4 WORKERS (20 vCPU)"
-
-create_cluster 4
-if [ $? -eq 0 ]; then
-  
-  # Test GroupByKey con diverse partizioni
-  echo ""
-  echo "--- GroupByKey Tests ---"
-  run_job 4 16 groupbykey
-  run_job 4 32 groupbykey
-  run_job 4 48 groupbykey
-  
-  # Test AggregateByKey (partizioni ottimali)
-  echo ""
-  echo "--- AggregateByKey Tests ---"
-  run_job 4 16 aggregatebykey
-  run_job 4 32 aggregatebykey
-  run_job 4 48 aggregatebykey
-  
-  # Test ReduceByKey (partizioni ottimali)
-  echo ""
-  echo "--- ReduceByKey Tests ---"
-  run_job 4 16 reducebykey
-  run_job 4 32 reducebykey
-  run_job 4 48 reducebykey
-  
-  delete_cluster 4
-else
-  echo "Errore! - Failed to create 4-worker cluster!"
-  echo "Warning! -  Possibile problema quota vCPU. Verifica con:"
-  echo "    gcloud compute project-info describe --format='value(quotas)' | grep CPUS"
-  exit 1
-fi
-
-# RIEPILOGO FINALE
-
-echo ""
-echo "Esperimenti completati"
-echo ""
-echo "Metriche scaricate:"
-ls -lh metrics-*.csv 2>/dev/null | awk '{print "  - " $9 " (" $5 ")"}'
-echo ""
-
-```
-### 4. Download Risultati
-
-```bash
-# Metriche specifiche
-gcloud storage cat gs://$BUCKET/output/2w-16p-aggregatebykey/metrics/part-* > metrics.csv
-
-# Tutte le metriche
-gcloud storage cat gs://$BUCKET/output/*/metrics/part-* > all-metrics.csv
-```
-
-### 5. Eliminazione Cluster
-
-```bash
-# IMPORTANTE: Elimina sempre il cluster dopo l'uso
-gcloud dataproc clusters delete earthquake-cluster-2w --region=$REGION --quiet
-```
-
+Al termine degli esperimenti il programma scaricherà automaticamente i risultati in formato csv.
 ---
 
 ## Troubleshooting
@@ -492,6 +261,15 @@ gcloud auth application-default login
 gcloud projects get-iam-policy $PROJECT_ID
 ```
 
+### Errore nella cancellazione di una cartella di output
+
+**Sintomi:** `? Error during execution: Output directory gs://your_bucket/output/[...] already exists`
+
+```bash
+gcloud storage rm -r gs://your_bucket/output/
+./runexps.sh
+```
+
 ---
 
 ## Quick Reference
@@ -505,31 +283,8 @@ spark-submit --class Main --master local[*] \
   target/scala-2.12/earthquake-application.jar \
   input.csv output 16 aggregatebykey 1
 
-# Crea cluster (2w)
-gcloud dataproc clusters create earthquake-cluster-2w \
-  --region=europe-west1 --num-workers 2 \
-  --master-machine-type=n2-standard-4 \
-  --worker-machine-type=n2-standard-4
-
-# Submit job
-gcloud dataproc jobs submit spark \
-  --cluster=earthquake-cluster-2w \
-  --region=europe-west1 \
-  --jar=gs://bucket/jars/earthquake-application.jar \
-  -- gs://bucket/data/dataset.csv \
-     gs://bucket/output/2w-16p-abk \
-     16 aggregatebykey 2
-
-# Download metriche
-gcloud storage cat gs://bucket/output/*/metrics/part-* > metrics.csv
-
-# Elimina cluster
-gcloud dataproc clusters delete earthquake-cluster-2w \
-  --region=europe-west1 --quiet
-
-# Verifica quota
-gcloud compute project-info describe \
-  --format="value(quotas)" | grep CPUS
+# Esegui gli esperimenti
+./runexps.sh
 ```
 
 ---
