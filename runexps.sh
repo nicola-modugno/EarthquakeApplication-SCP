@@ -299,12 +299,15 @@ if [ "$RUN_2W" = true ]; then
     run_job 2 8 aggregatebykey
     run_job 2 16 aggregatebykey
     run_job 2 32 aggregatebykey
+    run_job 2 48 aggregatebykey
     
     echo ""
     echo "--- ReduceByKey Tests ---"
     run_job 2 8 reducebykey
     run_job 2 16 reducebykey
     run_job 2 32 reducebykey
+    run_job 2 48 reducebykey
+
     
     delete_cluster 2
   fi
