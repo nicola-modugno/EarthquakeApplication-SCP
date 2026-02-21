@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ScalaCompilerConfiguration">
     <option name="separateProdTestSources" value="true" />
-    <profile name="sbt 1" modules="EarthquakeCoOccurrenceAnalysis-SACP,EarthquakeCoOccurrenceAnalysis-SACP.main,EarthquakeCoOccurrenceAnalysis-SACP.test,earthquake-application,earthquake-cooccurrence,earthquakecooccurrenceanalysis-sacp,earthquakecooccurrenceanalysis-sacp.main,earthquakecooccurrenceanalysis-sacp.test" />
+    <profile name="sbt 1" modules="EarthquakeCoOccurrenceAnalysis-SACP,EarthquakeCoOccurrenceAnalysis-SACP.main,EarthquakeCoOccurrenceAnalysis-SACP.test,earthquake-application,earthquake-application-v1,earthquake-cooccurrence,earthquakecooccurrenceanalysis-sacp,earthquakecooccurrenceanalysis-sacp.main,earthquakecooccurrenceanalysis-sacp.test" />
     <profile name="sbt 3" modules="earthquake-cooccurrence.main,earthquake-cooccurrence.test">
       <option name="deprecationWarnings" value="true" />
       <option name="uncheckedWarnings" value="true" />
@@ -14,7 +14,7 @@
         <parameter value="-target:jvm-1.8" />
       </parameters>
     </profile>
-    <profile name="sbt 4" modules="earthquake-application.main,earthquake-application.test">
+    <profile name="sbt 4" modules="earthquake-application-v1.main,earthquake-application-v1.test,earthquake-application.main,earthquake-application.test">
       <option name="deprecationWarnings" value="true" />
       <option name="uncheckedWarnings" value="true" />
       <option name="featureWarnings" value="true" />

@@ -70,8 +70,6 @@ object CoOccurrenceAnalysis {
     val repartitionedEvents = uniqueEvents.repartition(numPartitions).persist()
 
     // Step 4: Raggruppamento location per data (comune - sempre groupByKey)
-    // Questo è un "collect all" che non comprime: groupByKey è il più
-    // diretto perché shuffla coppie (date, location) leggere
     println("Step 4: Raggruppamento per data (groupByKey)...")
     val locationsByDate = repartitionedEvents
       .map { case (location, date) => (date, location) }
@@ -92,8 +90,6 @@ object CoOccurrenceAnalysis {
     println(s"Total co-occurrences found: $coOccCount")
 
     // Step 6: Conteggio co-occorrenze per coppia (DIFFERENZIATO)
-    // Qui i tre approcci si confrontano su (LocationPair, 1) => somma:
-    // il caso classico dove reduceByKey eccelle
     println(s"Step 6: Conteggio co-occorrenze per coppia (${approachName(approach)})...")
     val pairCounts = approach match {
       case GroupByKeyApproach =>
@@ -216,12 +212,6 @@ object CoOccurrenceAnalysis {
     case GroupByKeyApproach => "GroupByKey"
     case AggregateByKeyApproach => "AggregateByKey"
     case ReduceByKeyApproach => "ReduceByKey"
-    case _ => "Unknown"
-  }
-
-  def partitionerName(partitioner: PartitionerType): String = partitioner match {
-    case HashPartitionerType => "Hash"
-    case RangePartitionerType => "Range"
     case _ => "Unknown"
   }
 }
