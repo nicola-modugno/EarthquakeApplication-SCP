@@ -116,14 +116,13 @@ create_cluster() {
   
   echo ""
   echo "Creating ${workers}-worker cluster..."
-  echo "All machines: n2-standard-4 (4 vCPU, 16GB RAM)"
   
   if [ $workers -eq 2 ]; then
-    echo "Total vCPU: 12 (master + 2 workers)"
+    echo "1 master + 2 workers)"
   elif [ $workers -eq 3 ]; then
-    echo "Total vCPU: 16 (master + 3 workers)"
+    echo "1 master + 3 workers)"
   elif [ $workers -eq 4 ]; then
-    echo "Total vCPU: 20 (master + 4 workers)"
+    echo "1 master + 4 workers)"
   fi
   
   gcloud dataproc clusters create $cluster \
@@ -227,14 +226,10 @@ echo ""
 echo "  EARTHQUAKE CO-OCCURRENCE EXPERIMENTS"
 echo ""
 echo "Test pianificati:"
-echo "  1. Cluster 2 workers (8 vCPU): 8, 16, 32, 48 partizioni"
-echo "  2. Cluster 3 workers (12 vCPU): 16, 32, 48 partizioni"
-echo "  3. Cluster 4 workers (16 vCPU): 16, 32, 48 partizioni"
+echo "  1. Cluster 2 workers: 8, 16, 32, 48 partizioni"
+echo "  2. Cluster 3 workers: 16, 32, 48 partizioni"
+echo "  3. Cluster 4 workers: 16, 32, 48 partizioni"
 echo ""
-echo "Approcci da testare:"
-echo "  - GroupByKey"
-echo "  - AggregateByKey"
-echo "  - ReduceByKey"
 echo ""
 echo "Opzioni:"
 echo "  1) Esegui tutti i test (raccomandato)"
@@ -281,32 +276,32 @@ esac
 if [ "$RUN_2W" = true ]; then
   echo ""
   
-  echo "  2 WORKERS (8 vCPU)"
+  echo "  2 WORKERS "
   
   
   create_cluster 2
   if [ $? -eq 0 ]; then
     
     echo ""
-    echo "--- GroupByKey Tests ---"
-    run_job 2 8 groupbykey
-    run_job 2 16 groupbykey
-    run_job 2 32 groupbykey
-    run_job 2 48 groupbykey
+    echo "--- Test primo approccio ---"
+    run_job 2 8 1
+    run_job 2 16 1
+    run_job 2 32 1
+    run_job 2 48 1
     
     echo ""
-    echo "--- AggregateByKey Tests ---"
-    run_job 2 8 aggregatebykey
-    run_job 2 16 aggregatebykey
-    run_job 2 32 aggregatebykey
-    run_job 2 48 aggregatebykey
+    echo "--- Test secondo approccio ---"
+    run_job 2 8 2
+    run_job 2 16 2
+    run_job 2 32 2
+    run_job 2 48 2
     
     echo ""
-    echo "--- ReduceByKey Tests ---"
-    run_job 2 8 reducebykey
-    run_job 2 16 reducebykey
-    run_job 2 32 reducebykey
-    run_job 2 48 reducebykey
+    echo "--- Test terzo approccio ---"
+    run_job 2 8 3
+    run_job 2 16 3
+    run_job 2 32 3
+    run_job 2 48 3
 
     
     delete_cluster 2
@@ -317,29 +312,29 @@ fi
 if [ "$RUN_3W" = true ]; then
   echo ""
   
-  echo "  3 WORKERS (12 vCPU)"
+  echo "  3 WORKERS "
   
 
   create_cluster 3
   if [ $? -eq 0 ]; then
     
     echo ""
-    echo "--- GroupByKey Tests ---"
-    run_job 3 16 groupbykey
-    run_job 3 32 groupbykey
-    run_job 3 48 groupbykey
+    echo "--- Test primo approccio ---"
+    run_job 3 16 1
+    run_job 3 32 1
+    run_job 3 48 1
     
     echo ""
-    echo "--- AggregateByKey Tests ---"
-    run_job 3 16 aggregatebykey
-    run_job 3 32 aggregatebykey
-    run_job 3 48 aggregatebykey
+    echo "--- Test secondo approccio ---"
+    run_job 3 16 2
+    run_job 3 32 2
+    run_job 3 48 2
     
     echo ""
-    echo "--- ReduceByKey Tests ---"
-    run_job 3 16 reducebykey
-    run_job 3 32 reducebykey
-    run_job 3 48 reducebykey
+    echo "--- Test terzo approccio ---"
+    run_job 3 16 3
+    run_job 3 32 3
+    run_job 3 48 3
     
     delete_cluster 3
   fi
@@ -349,29 +344,29 @@ fi
 if [ "$RUN_4W" = true ]; then
   echo ""
   
-  echo "  4 WORKERS (16 vCPU)"
+  echo "  4 WORKERS "
   
 
   create_cluster 4
   if [ $? -eq 0 ]; then
     
     echo ""
-    echo "--- GroupByKey Tests ---"
-    run_job 4 16 groupbykey
-    run_job 4 32 groupbykey
-    run_job 4 48 groupbykey
+    echo "--- Test primo approccio ---"
+    run_job 4 16 1
+    run_job 4 32 1
+    run_job 4 48 1
     
     echo ""
-    echo "--- AggregateByKey Tests ---"
-    run_job 4 16 aggregatebykey
-    run_job 4 32 aggregatebykey
-    run_job 4 48 aggregatebykey
+    echo "--- Test secondo approccio ---"
+    run_job 4 16 2
+    run_job 4 32 2
+    run_job 4 48 2
     
     echo ""
-    echo "--- ReduceByKey Tests ---"
-    run_job 4 16 reducebykey
-    run_job 4 32 reducebykey
-    run_job 4 48 reducebykey
+    echo "--- Test terzo approccio ---"
+    run_job 4 16 3
+    run_job 4 32 3
+    run_job 4 48 3
     
     delete_cluster 4
   fi
