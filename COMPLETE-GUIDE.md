@@ -121,7 +121,7 @@ spark-submit \
 |-----------|--------|---------|-------------|
 | INPUT_FILE | path | - | File CSV input |
 | OUTPUT_DIR | path | - | Directory output |
-| NUM_PARTITIONS | 4,8,16,32,48 | 8 | Partizioni `repartition()` |
+| NUM_PARTITIONS | 8,16,32,48 | 8 | Partizioni `repartition()` |
 | APPROACH | groupbykey, aggregatebykey, reducebykey | groupbykey | Strategia aggregazione |
 | NUM_WORKERS | 1-4 | 1 | Numero workers |
 
