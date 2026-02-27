@@ -57,7 +57,16 @@ EarthquakeAnalysis-SCP/
 ├── src/main/scala/
 │   ├── Main.scala
 │   ├── analysis/
+│   |   ├── AnalysisResult.scala
+│   |   ├── Create AnalysisResult.scala
+│   |   ├── CoOccurrenceAnalysis.scala
+│   |   ├── EarthquakeEvent.scala
+│   |   ├── ExecutionMetrics.scala
+│   |   ├── Location.scala
+│   |   ├── LocationPair.scala
+│   |   └── MetricsCollector.scala
 │   ├── extraction/
+│   |   └── DataExtractor.scala
 │   └── utils/
 │       └── Utils.scala
 ├── build.sbt
@@ -66,7 +75,7 @@ EarthquakeAnalysis-SCP/
 
 ### 2. Dataset di Test
 
-Crea `test-data.csv`:
+Cerca `test-data.csv`:
 
 ```csv
 time,latitude,longitude,depth,mag
@@ -80,7 +89,7 @@ time,latitude,longitude,depth,mag
 
 **Requisiti formato:**
 - Header con `time,latitude,longitude` (minimo)
-- Time in formato ISO8601: `YYYY-MM-DDTHH:MM:SS.sssZ`
+- Time in formato: `YYYY-MM-DDTHH:MM:SS.sssZ`
 - Coordinate decimali
 
 ---
@@ -106,7 +115,6 @@ ls -lh target/scala-2.12/earthquake-application.jar
 ### Sintassi Base
 
 ```bash
-# Test con approccio 1 (GroupByKey) e Hash partitioner
 spark-submit \
   --class Main \
   --master local[*] \
@@ -121,7 +129,7 @@ spark-submit \
 |-----------|--------|---------|-------------|
 | INPUT_FILE | path | - | File CSV input |
 | OUTPUT_DIR | path | - | Directory output |
-| NUM_PARTITIONS | 8,16,32,48 | 8 | Partizioni `repartition()` |
+| NUM_PARTITIONS | 4,8,16,32,48 | 8 | Partizioni `repartition()` |
 | APPROACH | groupbykey, aggregatebykey, reducebykey | groupbykey | Strategia aggregazione |
 | NUM_WORKERS | 1-4 | 1 | Numero workers |
 

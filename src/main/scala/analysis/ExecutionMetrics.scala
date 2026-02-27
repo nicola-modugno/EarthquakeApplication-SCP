@@ -1,38 +1,38 @@
 package analysis
 
 /**
- * Genera file CSV con tutte le metriche necessarie per il report.
+ * Metriche di esecuzione per analisi con diverse configurazioni di partizioni.
+ * Usa sempre Hash partitioner (via repartition).
  */
 case class ExecutionMetrics(
-  approach: String,
-  partitioner: String,
-  numWorkers: Int,
-  numPartitions: Int,
-  totalEvents: Long,
-  uniqueEvents: Long,
-  coOccurrences: Long,
-  loadTimeMs: Long,
-  analysisTimeMs: Long,
-  totalTimeMs: Long,
-  maxCoOccurrenceCount: Int,
-  timestamp: Long = System.currentTimeMillis()
-) {
-  
+                             approach: String,
+                             numWorkers: Int,
+                             numPartitions: Int,
+                             totalEvents: Long,
+                             uniqueEvents: Long,
+                             coOccurrences: Long,
+                             loadTimeMs: Long,
+                             analysisTimeMs: Long,
+                             totalTimeMs: Long,
+                             maxCoOccurrenceCount: Int,
+                             timestamp: Long = System.currentTimeMillis()
+                           ) {
+
   /**
    * Converte le metriche in formato CSV.
    */
   def toCsvRow: String = {
-    s"$approach,$partitioner,$numWorkers,$numPartitions,$totalEvents,$uniqueEvents,$coOccurrences," +
-    s"$loadTimeMs,$analysisTimeMs,$totalTimeMs,$maxCoOccurrenceCount,$timestamp"
+    s"$approach,$numWorkers,$numPartitions,$totalEvents,$uniqueEvents,$coOccurrences," +
+      s"$loadTimeMs,$analysisTimeMs,$totalTimeMs,$maxCoOccurrenceCount,$timestamp"
   }
-  
+
   /**
    * Converte le metriche in formato leggibile.
    */
   def toReadableString: String = {
     s"""
        |Approach: $approach
-       |Partitioner: $partitioner
+       |Partitioner: Hash (via repartition)
        |Workers: $numWorkers
        |Partitions: $numPartitions
        |Total Events: $totalEvents
@@ -46,7 +46,3 @@ case class ExecutionMetrics(
        |""".stripMargin
   }
 }
-
-
-
-

@@ -1,15 +1,7 @@
 package analysis
 
-import org.apache.spark.{HashPartitioner, Partitioner, RangePartitioner}
 import org.apache.spark.rdd.RDD
 import utils.Utils
-
-/**
- * Tipo di partitioner da utilizzare.
- */
-trait PartitionerType
-case object HashPartitionerType extends PartitionerType
-case object RangePartitionerType extends PartitionerType
 
 object CoOccurrenceAnalysis {
 
@@ -25,18 +17,16 @@ object CoOccurrenceAnalysis {
    * @param events RDD di eventi sismici
    * @param numPartitions Numero di partizioni per ottimizzare il parallelismo
    * @param approach Approccio da utilizzare per l'analisi
-   * @param partitionerType Tipo di partitioner (Hash o Range)
    * @return AnalysisResult con coppia, date e metriche
    */
   def findMaxCoOccurrence(
                            events: RDD[EarthquakeEvent],
                            numPartitions: Int,
-                           approach: AnalysisApproach = GroupByKeyApproach,
-                           partitionerType: PartitionerType = HashPartitionerType
+                           approach: AnalysisApproach = GroupByKeyApproach
                          ): AnalysisResult = {
 
-    println(s"\n=== Using approach: ${approachName(approach)} ===")
-    println(s"=== Using partitioner: ${partitionerName(partitionerType)} ===\n")
+    println(s"\nUsing approach: ${approachName(approach)}")
+    println(s"Using $numPartitions partitions\n")
 
     // Step 1: Normalizzazione coordinate
     println("Step 1: Normalizzazione coordinate...")
@@ -57,11 +47,7 @@ object CoOccurrenceAnalysis {
       .map { case (lat, lon, date) => (Location(lat, lon), date) }
       .distinct()
 
-    // Crea partitioner appropriato
-    val partitioner = createPartitioner(uniqueEvents, numPartitions, partitionerType)
-    val partitionedEvents = uniqueEvents.partitionBy(partitioner).persist()
-
-    val uniqueCount = partitionedEvents.count()
+    val uniqueCount = uniqueEvents.count()
     println(s"Unique events after deduplication: $uniqueCount")
     normalizedEvents.unpersist()
 
@@ -137,7 +123,7 @@ object CoOccurrenceAnalysis {
                               coOccCount: Long
                             ): AnalysisResult = {
 
-    println("Step 6: Ricerca coppia con massime co-occorrenze...")
+    println("Step 7: Ricerca coppia con massime co-occorrenze...")
 
     val maxPairOption = if (pairCounts.isEmpty()) {
       None
@@ -149,7 +135,7 @@ object CoOccurrenceAnalysis {
       case Some((maxPair, count)) =>
         println(s"Max co-occurrence pair: $maxPair with $count occurrences")
 
-        println("Step 7: Estrazione date per la coppia massima...")
+        println("Step 8: Estrazione date per la coppia massima...")
         val dates = coOccurrences
           .filter { case (pair, _) => pair == maxPair }
           .map { case (_, date) => date }
@@ -192,19 +178,6 @@ object CoOccurrenceAnalysis {
       case _ =>
         println(s"Unknown approach '$str', using default (groupByKey)")
         GroupByKeyApproach
-    }
-  }
-
-  /**
-   * Parse string to partitioner type.
-   */
-  def parsePartitioner(str: String): PartitionerType = {
-    str.toLowerCase match {
-      case "hash" | "hashpartitioner" => HashPartitionerType
-      case "range" | "rangepartitioner" => RangePartitionerType
-      case _ =>
-        println(s"Unknown partitioner '$str', using default (Hash)")
-        HashPartitionerType
     }
   }
 

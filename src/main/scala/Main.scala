@@ -1,35 +1,19 @@
-import analysis.CoOccurrenceAnalysis
+import analysis.{CoOccurrenceAnalysis, ExecutionMetrics, MetricsCollector}
 import extraction.DataExtractor
-import analysis.ExecutionMetrics
-import analysis.MetricsCollector
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 import utils.Utils
 
-/**
- * Main per l'analisi delle co-occorrenze di eventi sismici.
- *
- * Genera automaticamente metriche in formato CSV per facilitare
- * l'analisi delle performance e la creazione del report.
- *
- * Usage: Main <input-file> <output-file> [num-partitions] [approach] [partitioner] [num-workers]
- *
- * Parametri:
- *   input-file: Path al CSV di input
- *   output-file: Path directory output
- *   num-partitions: Numero di partizioni (default: 8)
- *   approach: 1|groupbykey, 2|aggregatebykey, 3|reducebykey (default: 1)
- *   partitioner: hash|range (default: hash)
- *   num-workers: Numero di worker nel cluster (default: 1, per metriche)
- */
 object Main {
 
   def main(args: Array[String]): Unit = {
-    // Validazione argomenti
+    configureLogging()
+
     if (args.length < 2) {
-      println("Usage: Main <input-file> <output-file> [num-partitions] [approach] [partitioner] [num-workers]")
-      println("  approach: 1|groupbykey (default), 2|aggregatebykey, 3|reducebykey")
-      println("  partitioner: hash (default), range")
-      println("  num-workers: number of workers in cluster (for metrics)")
+      println("Usage: Main <input-file> <output-file> [num-partitions] [approach] [num-workers]")
+      println("  num-partitions: number of partitions for repartition() (default: 8)")
+      println("  approach: groupbykey|aggregatebykey|reducebykey (default: groupbykey)")
+      println("  num-workers: number of workers in cluster (default: 1)")
       System.exit(1)
     }
 
@@ -41,29 +25,16 @@ object Main {
     } else {
       analysis.CoOccurrenceAnalysis.GroupByKeyApproach
     }
-    val partitioner = if (args.length > 4) {
-      CoOccurrenceAnalysis.parsePartitioner(args(4))
-    } else {
-      analysis.HashPartitionerType
-    }
-    val numWorkers = if (args.length > 5) args(5).toInt else 1
+    val numWorkers = if (args.length > 4) args(4).toInt else 1
 
-    // Crea nome output con partitioner
-    /*val partitionerSuffix = partitioner match {
-      case analysis.HashPartitionerType => "hash"
-      case analysis.RangePartitionerType => "range"
-      case _ => "hash"
-    }
-    //val outputFile = s"${baseOutputFile}-${partitionerSuffix}"*/
-    val outputFile = baseOutputFile
-
-    // Spark/YARN gestirà automaticamente la configurazione di rete
     val spark = SparkSession.builder()
       .appName("Earthquake Co-occurrence Analysis")
       .config("spark.ui.showConsoleProgress", "false")
       .getOrCreate()
 
-    printHeader(inputFile, outputFile, numPartitions, approach, partitioner, numWorkers)
+    printHeader(inputFile, outputFile, numPartitions, approach, numWorkers)
+
+    var exitCode = 0
 
     try {
       // Caricamento dati
@@ -79,11 +50,10 @@ object Main {
       val result = CoOccurrenceAnalysis.findMaxCoOccurrence(
         rawData,
         numPartitions,
-        approach,
-        partitioner
+        approach
       )
       val analysisTime = System.currentTimeMillis() - startAnalysis
-      println(s"✓ Analysis completed in ${analysisTime}ms (${analysisTime / 1000.0}s)")
+      println(s"SUCCESS! - Analysis completed in ${analysisTime}ms (${analysisTime / 1000.0}s)")
 
       // Salvataggio risultati
       println("\n[3/4] Saving results...")
@@ -92,11 +62,11 @@ object Main {
           val output = Utils.formatOutput(pair, result.dates)
           Utils.saveOutput(spark, output, outputFile)
 
-          println(s"✓ Results saved to: $outputFile")
+          println(s"Results saved to: $outputFile")
           printResultsSummary(pair, result)
 
         case None =>
-          println("⚠ No co-occurrences found")
+          println("No co-occurrences found")
       }
 
       // Salvataggio metriche
@@ -105,7 +75,6 @@ object Main {
 
       val metrics = ExecutionMetrics(
         approach = CoOccurrenceAnalysis.approachName(approach),
-        partitioner = CoOccurrenceAnalysis.partitionerName(partitioner),
         numWorkers = numWorkers,
         numPartitions = numPartitions,
         totalEvents = result.totalEvents,
@@ -123,54 +92,63 @@ object Main {
       // Salva anche in formato leggibile
       MetricsCollector.saveMetricsReadable(spark, metrics, outputFile)
 
-      println(s"✓ Metrics saved to: $outputFile/metrics")
+      println(s"Metrics saved to: $outputFile/metrics")
 
       // Stampa performance summary
-      printPerformanceSummary(loadTime, analysisTime, totalTime, approach, partitioner)
+      printPerformanceSummary(loadTime, analysisTime, totalTime, approach)
 
     } catch {
       case e: Exception =>
-        println(s"\n✗ Error during execution: ${e.getMessage}")
+        println(s"\n Error during execution: ${e.getMessage}")
         e.printStackTrace()
-        System.exit(1)
+        exitCode = 1
     } finally {
+      shutdownSparkGracefully(spark)
+    }
+
+    System.exit(exitCode)
+  }
+
+  private def configureLogging(): Unit = {
+    Logger.getLogger("org.apache.spark.util.ShutdownHookManager").setLevel(Level.FATAL)
+    Logger.getLogger("org.apache.spark.SparkEnv").setLevel(Level.FATAL)
+    Logger.getLogger("org.apache.spark.util.Utils").setLevel(Level.ERROR)
+    Logger.getLogger("org.apache.spark.SparkContext").setLevel(Level.INFO)
+    Logger.getRootLogger.setLevel(Level.WARN)
+  }
+
+  private def shutdownSparkGracefully(spark: SparkSession): Unit = {
+    try {
+      println("\nShutting down Spark gracefully...")
       spark.stop()
+      Thread.sleep(500)
+      println("Spark shutdown completed")
+    } catch {
+      case _: Exception =>
     }
   }
 
-  /**
-   * Stampa l'header con le configurazioni.
-   */
   private def printHeader(
                            inputFile: String,
                            outputFile: String,
                            numPartitions: Int,
                            approach: analysis.CoOccurrenceAnalysis.AnalysisApproach,
-                           partitioner: analysis.PartitionerType,
                            numWorkers: Int
                          ): Unit = {
-    println("=" * 70)
     println("EARTHQUAKE CO-OCCURRENCE ANALYSIS")
-    println("=" * 70)
     println(s"Input file: $inputFile")
     println(s"Output file: $outputFile")
     println(s"Number of workers: $numWorkers")
     println(s"Number of partitions: $numPartitions")
     println(s"Analysis approach: ${CoOccurrenceAnalysis.approachName(approach)}")
-    println(s"Partitioner: ${CoOccurrenceAnalysis.partitionerName(partitioner)}")
-    println("=" * 70)
+    println(s"Partitioner: Hash (via repartition)")
   }
 
-  /**
-   * Stampa il sommario dei risultati.
-   */
   private def printResultsSummary(
                                    pair: analysis.LocationPair,
                                    result: analysis.AnalysisResult
                                  ): Unit = {
-    println("\n" + "=" * 70)
     println("RESULTS SUMMARY")
-    println("=" * 70)
     println(s"Max co-occurrence pair:")
     println(s"  Location 1: ${pair.first}")
     println(s"  Location 2: ${pair.second}")
@@ -193,25 +171,18 @@ object Main {
     }
   }
 
-  /**
-   * Stampa il sommario delle performance.
-   */
   private def printPerformanceSummary(
                                        loadTime: Long,
                                        analysisTime: Long,
                                        totalTime: Long,
-                                       approach: analysis.CoOccurrenceAnalysis.AnalysisApproach,
-                                       partitioner: analysis.PartitionerType
+                                       approach: analysis.CoOccurrenceAnalysis.AnalysisApproach
                                      ): Unit = {
-    println("\n" + "=" * 70)
     println("PERFORMANCE SUMMARY")
-    println("=" * 70)
     println(f"Load time:     ${loadTime}%8d ms (${loadTime / 1000.0}%6.2f s)")
     println(f"Analysis time: ${analysisTime}%8d ms (${analysisTime / 1000.0}%6.2f s)")
     println(f"Total time:    ${totalTime}%8d ms (${totalTime / 1000.0}%6.2f s)")
     println(f"Approach:      ${CoOccurrenceAnalysis.approachName(approach)}")
-    println(f"Partitioner:   ${CoOccurrenceAnalysis.partitionerName(partitioner)}")
-    println("=" * 70)
+    println(f"Partitioner:   Hash (via repartition)")
     println("\nMetrics CSV file has been generated for report analysis.")
   }
 }

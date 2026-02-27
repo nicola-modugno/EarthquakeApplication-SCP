@@ -63,7 +63,7 @@ object DataExtractor {
         }
       } catch {
         case e: Exception =>
-          println(s"Warning: Failed to parse row: ${e.getMessage}")
+          println(s"WARNING: Failed to parse row: ${e.getMessage}")
           None
       }
     }
